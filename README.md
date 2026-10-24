@@ -4,7 +4,7 @@ An Astro and Tailwind CSS web application foundation for Dee-Faith Pride Multi-B
 
 ## Current status
 
-The public storefront includes the cybercafé services specified by the owner, mobile-friendly search/category shortcuts, service-specific WhatsApp enquiry prompts, provider identity tiles, and the owner-supplied location and 24-hour opening information. An optional fixed-price order flow can collect a payment report for an existing order; protected staff pages support manual payment review and fulfilment updates. The new manual-operations migration must be applied in Supabase before those operations work. See [IMPLEMENTATION_STATUS.md](./IMPLEMENTATION_STATUS.md) for progress and remaining requirements.
+The public storefront is live at [dee-faith-pride.vercel.app](https://dee-faith-pride.vercel.app/) and includes the cybercafé services specified by the owner, mobile-friendly search/category shortcuts, service-specific WhatsApp enquiry prompts, provider identity tiles, and the owner-supplied location and 24-hour opening information. Add the expected Supabase environment variables in Vercel before database-backed service details and admin tools can work. An optional fixed-price order flow can collect a payment report for an existing order; protected staff pages support manual payment review and fulfilment updates. The new manual-operations migration must be applied in Supabase before those operations work. See [IMPLEMENTATION_STATUS.md](./IMPLEMENTATION_STATUS.md) for progress and remaining requirements.
 
 ## Technology
 
@@ -54,16 +54,15 @@ The following configuration is required for the Supabase-backed pages and admin 
 
 The project is configured for Astro server-side rendering on Vercel.
 
-1. Sign in to [Vercel](https://vercel.com/) and choose **Add New → Project**.
-2. Import `myfaithpride2022-png/Dee-Faith-Pride` from GitHub. Keep the root directory as `.` and let Vercel detect Astro. The build command is `pnpm build`.
-3. Add these environment variables in Vercel project settings for Production and Preview. Set them in the Vercel dashboard only; never add secret values to Git or paste them into chat.
-   - `PUBLIC_SITE_URL` — the deployed site origin, for example `https://your-project.vercel.app`; update it if you connect a custom domain.
+1. The GitHub repository is connected to Vercel and the initial deployment is live at `https://dee-faith-pride.vercel.app/`.
+2. In the Vercel project settings, add or verify these environment variables for Production and Preview. Set values in the Vercel dashboard only; never add secret values to Git or paste them into chat.
+   - `PUBLIC_SITE_URL` — `https://dee-faith-pride.vercel.app`; update it if you connect a custom domain.
    - `PUBLIC_SUPABASE_URL` — the Supabase project URL.
    - `PUBLIC_SUPABASE_ANON_KEY` — the Supabase publishable/anon key.
    - `SUPABASE_SERVICE_ROLE_KEY` — the Supabase service-role secret; server-side only.
-4. Deploy the project. Vercel will create Production deployments from `main` and Preview deployments from other branches.
-5. In Supabase **Authentication → URL Configuration**, set the site URL to the production URL and add the production and preview Vercel URLs to the redirect allow list. Keep local development URLs if needed.
-6. After deployment, verify `/`, `/services`, and `/admin/login`. Apply the pending manual-operations migration in Supabase before using payment reports or admin order review.
+3. Redeploy after saving changed environment variables. Vercel creates Production deployments from `main` and Preview deployments from other branches.
+4. In Supabase **Authentication → URL Configuration**, set the site URL to the production URL and add the production and preview Vercel URLs to the redirect allow list. Keep local development URLs if needed.
+5. Verify `/`, `/services`, service detail pages, and `/admin/login`. Apply the pending manual-operations migration in Supabase before using payment reports or admin order review.
 
 The admin and customer order APIs require server-side Supabase configuration. WhatsApp enquiries and the public catalogue do not rely on payment gateways. Do not publish payment instructions until verified by the business owner.
 
@@ -81,7 +80,7 @@ To format supported project files:
 corepack pnpm format
 ```
 
-The Vercel adapter builds the server-rendered app for Vercel Functions. A Vercel project, domain, and production environment variables must be configured in Vercel before the website is live.
+The Vercel adapter builds the server-rendered app for Vercel Functions. A production deployment is live on the Vercel-provided domain; Supabase environment variables and authentication URL configuration still need to be verified.
 
 ## Public pages currently implemented
 

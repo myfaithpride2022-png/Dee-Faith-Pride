@@ -8,7 +8,7 @@ Manual order operations and public service experience
 
 - Inspected the workspace and found no existing source code, package manifest, Astro configuration, or Git metadata.
 - Read the project blueprint and viewed all four available design-reference images.
-- Established Astro server output, a standalone Node adapter, Tailwind CSS v4, strict TypeScript, and formatting/check scripts.
+- Established Astro server output, the Vercel adapter, Tailwind CSS v4, strict TypeScript, and formatting/check scripts.
 - Added the initial responsive base layout, navigation, brand configuration, and design tokens.
 - Installed dependencies using pnpm and generated the lockfile.
 - Implemented the public homepage, catalogue with working search/category filters, service detail routes, and public information pages.
@@ -24,7 +24,7 @@ Manual order operations and public service experience
 - Added a customer order form that is shown only for an active service with valid form configuration and a confirmed fixed price.
 - The order form submits to the existing server endpoint, which calculates the amount server-side, saves the order, and returns a reference and private tracking token. Payment collection and payment confirmation are not part of this flow.
 - Added Supabase SSR server clients with HTTP-only, same-site cookies and active-profile checks.
-- Configured the official Astro Vercel adapter for server-rendered deployment; deployment still requires importing the GitHub repository and setting private environment variables in Vercel.
+- Configured the official Astro Vercel adapter and deployed the site to `https://dee-faith-pride.vercel.app/`.
 - Added same-origin admin sign-in/sign-out endpoints with generic authentication errors and no public role assignment.
 - Added protected `/admin` and `/admin/services` pages plus server-side service create/edit operations guarded by staff authentication and database RLS.
 - Service form fields are validated server-side, and naira amounts are converted to integer minor units without floating-point math.
@@ -38,7 +38,9 @@ Manual order operations and public service experience
 - `corepack pnpm install --reporter append-only` — passed; dependencies installed using pnpm 12.15.0.
 - `corepack pnpm check` — passed; 0 errors, 0 warnings, 0 hints across 43 files.
 - `corepack pnpm format:check` — passed; all matched files use Prettier style.
-- `corepack pnpm build` — passed after the manual payment and admin-operations changes; Vercel-specific deployment build still requires verification.
+- Vercel production deployment — live at `https://dee-faith-pride.vercel.app/`; home, catalogue, contact, and all 12 bundled provider image paths returned HTTP 200.
+- Production smoke checks — `/services/document-printing`, `/admin/login`, and `/admin/orders` returned HTTP 503 with a visible Supabase-configuration message because expected project environment variables are not yet configured or available in Vercel.
+- Local Vercel adapter build on Windows — blocked at function packaging by `EPERM` when the adapter tries to create a symlink in `.vercel/output`; Vercel's hosted deployment is running, but local Windows packaging was not verified.
 - `corepack pnpm test` — passed; all 7 order validation tests pass.
 - Production preview smoke tests — login page returned 200; unauthenticated `/admin` redirected to login; same-origin service mutation returned 401 without staff session; foreign-origin mutation returned 403; public catalogue and service detail returned 200.
 - Public catalogue smoke test — 19 service cards rendered; requested service/provider names were present; every sampled booking link generated a prefilled WhatsApp URL using the owner-supplied number; document printing detail and WhatsApp CTA returned HTTP 200.
@@ -46,13 +48,13 @@ Manual order operations and public service experience
 
 ## Outstanding / external configuration
 
-- The initial migration success was reported by the owner. The production preview also loaded a public service-detail route with HTTP 200, verifying the configured Supabase public read path without exposing credentials.
+- The initial migration success was reported by the owner. The new manual-operations migration remains pending.
 - Service availability and pricing are confirmed with the business via WhatsApp; no service prices or bank/payment details were invented.
 - Twelve provider logo images are bundled under `public/images/provider-logos`, so the deployed site does not depend on a third-party image host for those files. 9mobile and BEDC images were supplied in the workspace.
 - Provider marks are used for identification and do not imply affiliation. Confirm permissions and usage requirements with the respective brand owners before production.
 - Customer order-status lookup is not implemented. The private token currently authorizes payment reporting only.
 - Owner must provide approved payment instructions, business policies, and any production branding assets.
-- Vercel deployment is not live yet. Import the GitHub repository, configure the four environment variables in Vercel, deploy, and update Supabase Auth URL settings for the deployed host.
+- Configure or verify the four expected environment variables in Vercel (`PUBLIC_SITE_URL`, `PUBLIC_SUPABASE_URL`, `PUBLIC_SUPABASE_ANON_KEY`, and server-only `SUPABASE_SERVICE_ROLE_KEY`), redeploy, and update Supabase Auth URL settings for the deployed host. Do not share secret values in chat.
 
 ## Completed milestones
 
