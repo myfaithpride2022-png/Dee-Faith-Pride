@@ -1,0 +1,37 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import PageIntro from "@/components/ui/PageIntro.astro";
+import { site } from "@/data/site";
+---
+
+<BaseLayout
+  title="About | Dee-Faith Pride Multi-Biz"
+  description="About Dee-Faith Pride Multi-Biz."
+>
+  <main id="main-content">
+    <PageIntro
+      eyebrow="About the business"
+      title={site.name}
+      description={site.tagline}
+    />
+    <section class="mx-auto max-w-7xl px-5 py-12 sm:px-8">
+      <div class="max-w-3xl rounded-2xl border border-slate-200 bg-white p-7 sm:p-10">
+        <h2 class="text-xl font-semibold text-brand-900">
+          Digital service requests, with human review
+        </h2>
+        <p class="mt-4 text-sm leading-7 text-slate-600">
+          This website is being developed to help customers explore digital
+          services and request assistance. Service availability, prices, contact
+          details, and business credentials must be supplied and verified by the
+          business before publication.
+        </p>
+        <p class="mt-4 text-sm leading-7 text-slate-600">
+          Payments are planned to be made manually and confirmed by an
+          administrator. Service fulfilment is also handled manually; a payment
+          receipt is not confirmation that payment has been received or that a
+          service is complete.
+        </p>
+      </div>
+    </section>
+  </main>
+</BaseLayout>

@@ -1,0 +1,76 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import PageIntro from "@/components/ui/PageIntro.astro";
+import { site } from "@/data/site";
+import { createWhatsAppLink } from "@/lib/whatsapp";
+---
+
+<BaseLayout
+  title="Contact | Dee-Faith Pride Multi-Biz"
+  description="Contact information for Dee-Faith Pride Multi-Biz."
+>
+  <main id="main-content">
+    <PageIntro
+      eyebrow="Get in touch"
+      title="Contact information"
+      description="Ask about a service, request a quote, or get help with your next step."
+    />
+    <section class="mx-auto grid max-w-7xl gap-6 px-5 py-12 sm:px-8 lg:grid-cols-2">
+      <div class="rounded-2xl border border-slate-200 bg-white p-7 shadow-sm sm:p-9">
+        <p class="text-xs font-bold uppercase tracking-[0.16em] text-brand-700">
+          WhatsApp enquiries
+        </p>
+        <h2 class="mt-2 text-2xl font-semibold text-brand-900">
+          Let’s discuss what you need
+        </h2>
+        <p class="mt-3 text-sm leading-6 text-slate-600">
+          Message {site.name} about printing, registrations, graphics, bills,
+          subscriptions, or another digital service. We’ll confirm the
+          requirements and current price before proceeding.
+        </p>
+        <a
+          class="mt-6 inline-flex min-h-12 items-center justify-center rounded-lg bg-[#167a4a] px-5 text-sm font-semibold text-white hover:bg-[#12633c] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-700"
+          href={createWhatsAppLink(
+            `Hello ${site.name}, I have a question about your services.`,
+          )}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Chat on WhatsApp
+        </a>
+        <p class="mt-3 text-xs text-slate-500">
+          WhatsApp: {site.whatsappNumber}
+        </p>
+      </div>
+      <div class="rounded-2xl border border-slate-200 bg-white p-7 shadow-sm sm:p-9">
+        <p class="text-xs font-bold uppercase tracking-[0.16em] text-brand-700">
+          Visit us
+        </p>
+        <h2 class="mt-2 text-2xl font-semibold text-brand-900">
+          Find us in Ado-Ekiti
+        </h2>
+        <p class="mt-3 text-base font-medium text-slate-800">{site.location}</p>
+        <p class="mt-2 inline-flex items-center gap-2 text-sm font-semibold text-emerald-800">
+          <span
+            class="size-2 rounded-full bg-emerald-500"
+            aria-hidden="true"
+          ></span>
+          {site.openingHours}
+        </p>
+        <p class="mt-3 text-sm leading-6 text-slate-600">
+          Come in for printing, registrations, design work, and other cybercafé
+          services. For complex requests, message us first to confirm the
+          details.
+        </p>
+        <a
+          class="mt-6 inline-flex min-h-11 items-center justify-center rounded-lg border border-slate-300 px-4 text-sm font-semibold text-brand-800 hover:border-brand-700"
+          href={site.mapsSearchUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Open directions in Maps
+        </a>
+      </div>
+    </section>
+  </main>
+</BaseLayout>

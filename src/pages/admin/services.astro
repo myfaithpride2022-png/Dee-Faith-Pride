@@ -1,0 +1,448 @@
+---
+import AdminLayout from "@/layouts/AdminLayout.astro";
+import {
+  AuthConfigurationError,
+  createRequestSupabaseClient,
+  getActiveStaff,
+} from "@/lib/supabase/auth";
+import type { CategoryRow, ServiceRow } from "@/lib/supabase/database.types";
+
+let profile = null;
+let categories: CategoryRow[] = [];
+let services: ServiceRow[] = [];
+let loadError = "";
+Astro.response.headers.set("Cache-Control", "private, no-store");
+
+try {
+  const supabase = createRequestSupabaseClient(Astro.request, Astro.cookies);
+  const staff = await getActiveStaff(supabase);
+  if (!staff) return Astro.redirect("/admin/login");
+  profile = staff.profile;
+
+  const [categoryResult, serviceResult] = await Promise.all([
+    supabase
+      .from("service_categories")
+      .select("*")
+      .order("sort_order", { ascending: true })
+      .order("name", { ascending: true }),
+    supabase.from("services").select("*").order("name", { ascending: true }),
+  ]);
+  if (categoryResult.error || serviceResult.error) {
+    console.error(
+      "Unable to load admin service configuration.",
+      categoryResult.error ?? serviceResult.error,
+    );
+    loadError = "Service configuration could not be loaded. Please try again.";
+    Astro.response.status = 503;
+  } else {
+    categories = categoryResult.data ?? [];
+    services = serviceResult.data ?? [];
+  }
+} catch (error) {
+  if (error instanceof AuthConfigurationError) {
+    Astro.response.status = 503;
+    loadError = "Supabase authentication is not configured on this server.";
+  } else {
+    throw error;
+  }
+}
+
+function formatNaira(minor: number | string | null): string {
+  if (minor === null) return "";
+  const amount = BigInt(minor);
+  const naira = amount / 100n;
+  const kobo = (amount % 100n).toString().padStart(2, "0");
+  return `${naira}.${kobo}`;
+}
+---
+
+{profile ? (
+  <AdminLayout title="Services" profile={profile}>
+    <main id="main-content" class="mx-auto max-w-7xl px-5 py-12 sm:px-8">
+      <p class="text-xs font-bold uppercase tracking-[0.16em] text-brand-700">
+        Catalogue management
+      </p>
+      <h1 class="mt-2 text-3xl font-semibold tracking-tight text-brand-900">
+        Services
+      </h1>
+      <p class="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
+        Enter only owner-approved service details and prices. Activating a
+        fixed-price service publishes its request form; no payment is collected
+        here.
+      </p>
+
+      {loadError ? (
+        <p
+          class="mt-7 rounded-lg bg-rose-50 p-4 text-sm text-rose-800"
+          role="alert"
+        >
+          {loadError}
+        </p>
+      ) : (
+        <div class="mt-8 grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,0.9fr)]">
+          <section class="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
+            <h2 class="text-xl font-semibold text-brand-900">
+              Current services
+            </h2>
+            {services.length ? (
+              <div class="mt-5 space-y-3">
+                {services.map((service) => (
+                  <article class="rounded-xl border border-slate-200 p-4">
+                    <div class="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <h3 class="font-semibold text-slate-900">
+                          {service.name}
+                        </h3>
+                        <p class="mt-1 text-xs text-slate-600">
+                          {service.slug} ·{" "}
+                          {service.pricing_type === "fixed"
+                            ? `₦${formatNaira(service.base_price_minor)} + ₦${formatNaira(service.service_fee_minor)} fee`
+                            : "Quotation"}
+                        </p>
+                        <p
+                          class:list={[
+                            "mt-1 text-xs font-medium",
+                            service.is_active
+                              ? "text-emerald-700"
+                              : "text-slate-500",
+                          ]}
+                        >
+                          {service.is_active ? "Active" : "Inactive"}
+                        </p>
+                      </div>
+                      <button
+                        class="min-h-9 rounded-lg border border-slate-300 px-3 text-sm font-semibold text-brand-800 hover:border-brand-700"
+                        type="button"
+                        data-edit-service
+                        data-service={JSON.stringify(service)}
+                      >
+                        Edit
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <p class="mt-4 text-sm leading-6 text-slate-600">
+                No database services are configured yet. Create one after
+                confirming its details and price with the business owner.
+              </p>
+            )}
+          </section>
+
+          <section class="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
+            <h2 class="text-xl font-semibold text-brand-900" data-form-heading>
+              Add a service
+            </h2>
+            <form class="mt-5 space-y-4" data-service-form>
+              <input name="id" type="hidden" />
+              <div>
+                <label
+                  class="mb-1 block text-sm font-medium"
+                  for="service-name"
+                >
+                  Service name
+                </label>
+                <input
+                  class="min-h-10 w-full rounded-lg border border-slate-300 px-3 text-sm"
+                  id="service-name"
+                  name="name"
+                  maxlength="120"
+                  required
+                />
+              </div>
+              <div>
+                <label
+                  class="mb-1 block text-sm font-medium"
+                  for="service-slug"
+                >
+                  URL slug
+                </label>
+                <input
+                  class="min-h-10 w-full rounded-lg border border-slate-300 px-3 text-sm"
+                  id="service-slug"
+                  name="slug"
+                  pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
+                  maxlength="100"
+                  required
+                />
+              </div>
+              <div>
+                <label
+                  class="mb-1 block text-sm font-medium"
+                  for="service-category"
+                >
+                  Category
+                </label>
+                <select
+                  class="min-h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm"
+                  id="service-category"
+                  name="categoryId"
+                >
+                  <option value="">No category</option>
+                  {categories.map((category) => (
+                    <option value={category.id}>{category.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label
+                  class="mb-1 block text-sm font-medium"
+                  for="service-description"
+                >
+                  Description
+                </label>
+                <textarea
+                  class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  id="service-description"
+                  name="description"
+                  rows="2"
+                  maxlength="2000"
+                ></textarea>
+              </div>
+              <div>
+                <label
+                  class="mb-1 block text-sm font-medium"
+                  for="service-instructions"
+                >
+                  Customer instructions
+                </label>
+                <textarea
+                  class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  id="service-instructions"
+                  name="instructions"
+                  rows="2"
+                  maxlength="2000"
+                ></textarea>
+              </div>
+              <div>
+                <label
+                  class="mb-1 block text-sm font-medium"
+                  for="service-form-schema"
+                >
+                  Request form fields (JSON)
+                </label>
+                <textarea
+                  class="w-full rounded-lg border border-slate-300 px-3 py-2 font-mono text-xs"
+                  id="service-form-schema"
+                  name="formSchema"
+                  rows="7"
+                  required
+                >{"{\"fields\":[]}"}</textarea>
+                <p class="mt-1 text-xs leading-5 text-slate-500">
+                  Fields require name, label, type (text, phone, email, select),
+                  and required. Select fields also require an options array.
+                </p>
+              </div>
+              <div>
+                <label
+                  class="mb-1 block text-sm font-medium"
+                  for="pricing-type"
+                >
+                  Pricing
+                </label>
+                <select
+                  class="min-h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm"
+                  id="pricing-type"
+                  name="pricingType"
+                >
+                  <option value="quotation">Quotation</option>
+                  <option value="fixed">Fixed price</option>
+                </select>
+              </div>
+              <div class="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label
+                    class="mb-1 block text-sm font-medium"
+                    for="base-price"
+                  >
+                    Base price (NGN)
+                  </label>
+                  <input
+                    class="min-h-10 w-full rounded-lg border border-slate-300 px-3 text-sm"
+                    id="base-price"
+                    name="basePriceNaira"
+                    inputmode="decimal"
+                    placeholder="e.g. 1500.00"
+                  />
+                </div>
+                <div>
+                  <label
+                    class="mb-1 block text-sm font-medium"
+                    for="service-fee"
+                  >
+                    Service fee (NGN)
+                  </label>
+                  <input
+                    class="min-h-10 w-full rounded-lg border border-slate-300 px-3 text-sm"
+                    id="service-fee"
+                    name="serviceFeeNaira"
+                    inputmode="decimal"
+                    value="0"
+                    required
+                  />
+                </div>
+              </div>
+              <label class="flex items-center gap-2 text-sm">
+                <input name="isActive" type="checkbox" value="true" />
+                Publish as active
+              </label>
+              <label class="flex items-center gap-2 text-sm">
+                <input name="isFeatured" type="checkbox" value="true" />
+                Feature this service
+              </label>
+              <div class="flex flex-wrap gap-3">
+                <button
+                  class="min-h-10 rounded-lg bg-brand-800 px-4 text-sm font-semibold text-white hover:bg-brand-900 disabled:opacity-60"
+                  type="submit"
+                >
+                  Save service
+                </button>
+                <button
+                  class="min-h-10 rounded-lg border border-slate-300 px-4 text-sm font-semibold text-slate-700"
+                  type="reset"
+                >
+                  Clear form
+                </button>
+              </div>
+              <p
+                class="text-sm text-slate-700"
+                data-service-status
+                role="status"
+                aria-live="polite"
+              ></p>
+            </form>
+          </section>
+        </div>
+      )}
+    </main>
+  </AdminLayout>
+) : (
+  <main id="main-content" class="mx-auto max-w-3xl px-5 py-16 sm:px-8">
+    <h1 class="text-2xl font-semibold text-brand-900">Services unavailable</h1>
+    <p class="mt-3 text-slate-600">
+      {loadError || "Unable to verify staff access."}
+    </p>
+  </main>
+)}
+
+<script>
+  interface ServiceRecord {
+    id: string;
+    name: string;
+    slug: string;
+    category_id: string | null;
+    description: string;
+    instructions: string;
+    form_schema: unknown;
+    pricing_type: "fixed" | "quotation";
+    base_price_minor: string | number | null;
+    service_fee_minor: string | number;
+    is_active: boolean;
+    is_featured: boolean;
+  }
+
+  interface SaveResponse {
+    error?: string;
+    message?: string;
+  }
+
+  const form = document.querySelector<HTMLFormElement>("[data-service-form]");
+  const status = document.querySelector<HTMLElement>("[data-service-status]");
+  const heading = document.querySelector<HTMLElement>("[data-form-heading]");
+
+  function toNaira(value: string | number | null): string {
+    if (value === null) return "";
+    const minor = BigInt(value);
+    return `${minor / 100n}.${(minor % 100n).toString().padStart(2, "0")}`;
+  }
+
+  document
+    .querySelectorAll<HTMLButtonElement>("[data-edit-service]")
+    .forEach((button) => {
+      button.addEventListener("click", () => {
+        if (!form) return;
+        const service = JSON.parse(
+          button.dataset.service ?? "",
+        ) as ServiceRecord;
+        (form.elements.namedItem("id") as HTMLInputElement).value = service.id;
+        (form.elements.namedItem("name") as HTMLInputElement).value =
+          service.name;
+        (form.elements.namedItem("slug") as HTMLInputElement).value =
+          service.slug;
+        (form.elements.namedItem("categoryId") as HTMLSelectElement).value =
+          service.category_id ?? "";
+        (form.elements.namedItem("description") as HTMLTextAreaElement).value =
+          service.description;
+        (form.elements.namedItem("instructions") as HTMLTextAreaElement).value =
+          service.instructions;
+        (form.elements.namedItem("formSchema") as HTMLTextAreaElement).value =
+          JSON.stringify(service.form_schema, null, 2);
+        (form.elements.namedItem("pricingType") as HTMLSelectElement).value =
+          service.pricing_type;
+        (form.elements.namedItem("basePriceNaira") as HTMLInputElement).value =
+          toNaira(service.base_price_minor);
+        (form.elements.namedItem("serviceFeeNaira") as HTMLInputElement).value =
+          toNaira(service.service_fee_minor);
+        (form.elements.namedItem("isActive") as HTMLInputElement).checked =
+          service.is_active;
+        (form.elements.namedItem("isFeatured") as HTMLInputElement).checked =
+          service.is_featured;
+        if (heading) heading.textContent = `Edit ${service.name}`;
+        form.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    });
+
+  form?.addEventListener("reset", () => {
+    if (heading) heading.textContent = "Add a service";
+    window.setTimeout(() => {
+      (form.elements.namedItem("serviceFeeNaira") as HTMLInputElement).value =
+        "0";
+      (form.elements.namedItem("formSchema") as HTMLTextAreaElement).value =
+        '{"fields":[]}';
+    });
+  });
+
+  form?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (!status || !form) return;
+    const button = form.querySelector<HTMLButtonElement>(
+      'button[type="submit"]',
+    );
+    if (!button) return;
+    button.disabled = true;
+    status.textContent = "Saving service…";
+    const data = new FormData(form);
+
+    try {
+      const response = await fetch("/api/admin/services", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: data.get("id") || undefined,
+          name: data.get("name"),
+          slug: data.get("slug"),
+          categoryId: data.get("categoryId"),
+          description: data.get("description"),
+          instructions: data.get("instructions"),
+          formSchema: data.get("formSchema"),
+          pricingType: data.get("pricingType"),
+          basePriceNaira: data.get("basePriceNaira") ?? "",
+          serviceFeeNaira: data.get("serviceFeeNaira"),
+          isActive: data.has("isActive"),
+          isFeatured: data.has("isFeatured"),
+        }),
+      });
+      const result = (await response.json()) as SaveResponse;
+      if (!response.ok) {
+        status.textContent = result.error ?? "Service could not be saved.";
+        return;
+      }
+      window.location.reload();
+    } catch {
+      status.textContent = "Unable to reach the service. Please try again.";
+    } finally {
+      button.disabled = false;
+    }
+  });
+</script>

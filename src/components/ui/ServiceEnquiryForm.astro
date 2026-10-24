@@ -1,0 +1,158 @@
+---
+interface Props {
+  serviceName: string;
+  serviceDetails: string[];
+  whatsappNumber: string;
+}
+
+const { serviceName, serviceDetails, whatsappNumber } = Astro.props;
+const nextSteps = serviceDetails.slice(0, 4);
+---
+
+<section
+  class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8"
+  aria-labelledby="service-enquiry-heading"
+>
+  <div class="grid gap-8 lg:grid-cols-[0.85fr_1.15fr]">
+    <div>
+      <p class="text-xs font-bold uppercase tracking-[0.16em] text-brand-700">
+        No payment on this page
+      </p>
+      <h2
+        id="service-enquiry-heading"
+        class="mt-2 text-2xl font-semibold tracking-tight text-brand-900"
+      >
+        Start a {serviceName} enquiry
+      </h2>
+      <p class="mt-3 text-sm leading-6 text-slate-600">
+        Share a few details and we’ll open a pre-filled WhatsApp message. You
+        can review it, attach files in WhatsApp, and choose whether to send it.
+        Nothing is submitted to or stored by this website.
+      </p>
+      {nextSteps.length > 0 && (
+        <div class="mt-5 rounded-xl bg-slate-50 p-4">
+          <h3 class="text-sm font-semibold text-slate-900">
+            Helpful details to include
+          </h3>
+          <ul class="mt-2 space-y-2">
+            {nextSteps.map((detail) => (
+              <li class="flex gap-2 text-sm leading-5 text-slate-600">
+                <span class="text-accent-500" aria-hidden="true">
+                  ✓
+                </span>
+                {detail}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+
+    <form
+      class="space-y-4"
+      data-service-enquiry
+      data-service-name={serviceName}
+      data-whatsapp-number={whatsappNumber}
+    >
+      <div>
+        <label
+          class="mb-1.5 block text-sm font-medium text-slate-800"
+          for="enquiry-name"
+        >
+          Your name <span class="font-normal text-slate-500">(optional)</span>
+        </label>
+        <input
+          class="min-h-11 w-full rounded-lg border border-slate-300 px-3 text-sm"
+          id="enquiry-name"
+          name="customerName"
+          autocomplete="name"
+          maxlength="80"
+        />
+      </div>
+      <div>
+        <label
+          class="mb-1.5 block text-sm font-medium text-slate-800"
+          for="enquiry-request"
+        >
+          What would you like us to know?
+        </label>
+        <textarea
+          class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          id="enquiry-request"
+          name="requestDetails"
+          rows="4"
+          maxlength="800"
+          placeholder="Add quantity, size, deadline, provider, or other useful details."
+          required
+        ></textarea>
+      </div>
+      <p class="text-xs leading-5 text-slate-500">
+        For printing or design, attach the file after WhatsApp opens. Never
+        share passwords, PINs, or one-time codes.
+      </p>
+      <button
+        class="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-[#167a4a] px-5 text-sm font-semibold text-white transition-colors hover:bg-[#12633c] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-700 sm:w-auto"
+        type="submit"
+      >
+        Continue to WhatsApp
+      </button>
+      <p
+        class="text-sm text-rose-700"
+        data-enquiry-status
+        role="status"
+        aria-live="polite"
+      ></p>
+    </form>
+  </div>
+</section>
+
+<script>
+  document
+    .querySelectorAll<HTMLFormElement>("[data-service-enquiry]")
+    .forEach((form) => {
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const formData = new FormData(form);
+        const status = form.querySelector<HTMLElement>("[data-enquiry-status]");
+        const serviceName = form.dataset.serviceName ?? "a service";
+        const rawNumber = form.dataset.whatsappNumber ?? "";
+        const digits = rawNumber.replace(/\D/g, "");
+        const phone = digits.startsWith("0") ? `234${digits.slice(1)}` : digits;
+        if (phone.length < 10) {
+          if (status) {
+            status.textContent =
+              "WhatsApp contact is not configured. Please use the contact page.";
+          }
+          return;
+        }
+
+        const name = String(formData.get("customerName") ?? "").trim();
+        const requestDetails = String(
+          formData.get("requestDetails") ?? "",
+        ).trim();
+        const lines = [
+          "Hello Dee-Faith Pride Multi-Biz,",
+          "",
+          `I would like to enquire/book: ${serviceName}.`,
+          name ? `My name: ${name}` : "",
+          "",
+          "Request details:",
+          requestDetails,
+          "",
+          "Please confirm availability, requirements, and the current price before I proceed.",
+        ].filter((line) => line !== undefined);
+        const link = `https://wa.me/${phone}?text=${encodeURIComponent(lines.join("\n"))}`;
+        const whatsappWindow = window.open(link, "_blank");
+        if (!whatsappWindow && status) {
+          status.textContent =
+            "Your browser blocked the WhatsApp window. Allow pop-ups and try again.";
+        } else if (whatsappWindow) {
+          whatsappWindow.opener = null;
+          if (status) {
+            status.textContent =
+              "WhatsApp opened. Review the message, attach any files there, then press Send.";
+          }
+        }
+      });
+    });
+</script>

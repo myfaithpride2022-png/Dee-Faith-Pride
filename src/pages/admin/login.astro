@@ -1,0 +1,152 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import {
+  createRequestSupabaseClient,
+  getActiveStaff,
+  AuthConfigurationError,
+} from "@/lib/supabase/auth";
+
+let alreadySignedIn = false;
+let configurationMissing = false;
+Astro.response.headers.set("Cache-Control", "private, no-store");
+
+try {
+  const supabase = createRequestSupabaseClient(Astro.request, Astro.cookies);
+  alreadySignedIn = Boolean(await getActiveStaff(supabase));
+} catch (error) {
+  if (error instanceof AuthConfigurationError) {
+    configurationMissing = true;
+    Astro.response.status = 503;
+  } else {
+    throw error;
+  }
+}
+---
+
+<BaseLayout title="Staff sign in | Dee-Faith Pride Multi-Biz">
+  <main id="main-content" class="mx-auto max-w-lg px-5 py-16 sm:px-8">
+    <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+      <p class="text-xs font-bold uppercase tracking-[0.16em] text-brand-700">
+        Staff access
+      </p>
+      <h1 class="mt-2 text-3xl font-semibold tracking-tight text-brand-900">
+        Admin sign in
+      </h1>
+      {alreadySignedIn ? (
+        <>
+          <p class="mt-4 text-sm leading-6 text-slate-600">
+            You are already signed in with an active staff account.
+          </p>
+          <a
+            class="mt-6 inline-flex min-h-11 items-center rounded-lg bg-brand-800 px-5 text-sm font-semibold text-white"
+            href="/admin"
+          >
+            Open dashboard
+          </a>
+        </>
+      ) : configurationMissing ? (
+        <p class="mt-4 rounded-lg bg-amber-50 p-4 text-sm leading-6 text-amber-950">
+          Supabase authentication is not configured on this server.
+        </p>
+      ) : (
+        <>
+          <p class="mt-3 text-sm leading-6 text-slate-600">
+            Sign in with a Supabase Auth account that has an active staff
+            profile. Public customer accounts cannot access the dashboard.
+          </p>
+          <form class="mt-7 space-y-5" data-admin-login>
+            <div>
+              <label
+                class="mb-1.5 block text-sm font-medium text-slate-800"
+                for="admin-email"
+              >
+                Email
+              </label>
+              <input
+                class="min-h-11 w-full rounded-lg border border-slate-300 px-3 text-sm"
+                id="admin-email"
+                name="email"
+                type="email"
+                autocomplete="username"
+                maxlength="254"
+                required
+              />
+            </div>
+            <div>
+              <label
+                class="mb-1.5 block text-sm font-medium text-slate-800"
+                for="admin-password"
+              >
+                Password
+              </label>
+              <input
+                class="min-h-11 w-full rounded-lg border border-slate-300 px-3 text-sm"
+                id="admin-password"
+                name="password"
+                type="password"
+                autocomplete="current-password"
+                maxlength="256"
+                required
+              />
+            </div>
+            <button
+              class="inline-flex min-h-11 items-center justify-center rounded-lg bg-brand-800 px-5 text-sm font-semibold text-white hover:bg-brand-900 disabled:cursor-wait disabled:opacity-60"
+              type="submit"
+            >
+              Sign in
+            </button>
+            <p
+              class="text-sm text-rose-700"
+              data-login-status
+              role="status"
+              aria-live="polite"
+            ></p>
+          </form>
+        </>
+      )}
+    </section>
+  </main>
+</BaseLayout>
+
+<script>
+  interface LoginResponse {
+    error?: string;
+    redirect?: string;
+  }
+
+  const form = document.querySelector<HTMLFormElement>("[data-admin-login]");
+  const status = document.querySelector<HTMLElement>("[data-login-status]");
+
+  form?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (!status) return;
+    const button = form.querySelector<HTMLButtonElement>(
+      'button[type="submit"]',
+    );
+    if (!button) return;
+    button.disabled = true;
+    status.textContent = "Signing in…";
+    const formData = new FormData(form);
+
+    try {
+      const response = await fetch("/api/admin/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: formData.get("email"),
+          password: formData.get("password"),
+        }),
+      });
+      const result = (await response.json()) as LoginResponse;
+      if (!response.ok) {
+        status.textContent = result.error ?? "Sign-in failed.";
+        return;
+      }
+      window.location.assign(result.redirect ?? "/admin");
+    } catch {
+      status.textContent = "Unable to reach the sign-in service.";
+    } finally {
+      button.disabled = false;
+    }
+  });
+</script>

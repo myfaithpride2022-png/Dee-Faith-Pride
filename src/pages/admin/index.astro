@@ -1,0 +1,84 @@
+---
+import AdminLayout from "@/layouts/AdminLayout.astro";
+import {
+  createRequestSupabaseClient,
+  getActiveStaff,
+  AuthConfigurationError,
+} from "@/lib/supabase/auth";
+
+let profile = null;
+let unavailable = false;
+Astro.response.headers.set("Cache-Control", "private, no-store");
+
+try {
+  const supabase = createRequestSupabaseClient(Astro.request, Astro.cookies);
+  const staff = await getActiveStaff(supabase);
+  if (!staff) return Astro.redirect("/admin/login");
+  profile = staff.profile;
+} catch (error) {
+  if (error instanceof AuthConfigurationError) {
+    Astro.response.status = 503;
+    unavailable = true;
+  } else {
+    throw error;
+  }
+}
+---
+
+{unavailable ? (
+  <main id="main-content" class="mx-auto max-w-3xl px-5 py-16 sm:px-8">
+    <h1 class="text-2xl font-semibold text-brand-900">Admin unavailable</h1>
+    <p class="mt-3 text-slate-600">
+      Supabase authentication is not configured on this server.
+    </p>
+  </main>
+) : profile ? (
+  <AdminLayout title="Overview" profile={profile}>
+    <main id="main-content" class="mx-auto max-w-7xl px-5 py-12 sm:px-8">
+      <p class="text-xs font-bold uppercase tracking-[0.16em] text-brand-700">
+        Workspace
+      </p>
+      <h1 class="mt-2 text-3xl font-semibold tracking-tight text-brand-900">
+        Admin overview
+      </h1>
+      <p class="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
+        Staff access is active. Configure approved services and prices before
+        publishing customer order forms. Payment review and service fulfilment
+        remain manual processes.
+      </p>
+      <div class="mt-8 grid gap-4 sm:grid-cols-2">
+        <a
+          class="rounded-2xl border border-slate-200 bg-white p-6 transition-colors hover:border-brand-700"
+          href="/admin/services"
+        >
+          <h2 class="text-lg font-semibold text-brand-900">Manage services</h2>
+          <p class="mt-2 text-sm leading-6 text-slate-600">
+            Configure service forms, quotation or fixed pricing, and
+            availability.
+          </p>
+        </a>
+        <a
+          class="rounded-2xl border border-slate-200 bg-white p-6 transition-colors hover:border-brand-700"
+          href="/admin/orders"
+        >
+          <h2 class="text-lg font-semibold text-brand-900">
+            Review orders & payments
+          </h2>
+          <p class="mt-2 text-sm leading-6 text-slate-600">
+            Manually verify customer payment reports and update service
+            fulfilment with an audit trail.
+          </p>
+        </a>
+        <div class="rounded-2xl border border-amber-200 bg-amber-50 p-6">
+          <h2 class="text-lg font-semibold text-amber-950">
+            Manual operations only
+          </h2>
+          <p class="mt-2 text-sm leading-6 text-amber-900">
+            No gateway, automatic payment confirmation, or automatic provider
+            fulfilment is active.
+          </p>
+        </div>
+      </div>
+    </main>
+  </AdminLayout>
+) : null}

@@ -1,0 +1,93 @@
+---
+import { site } from "@/data/site";
+---
+
+<footer class="border-t border-slate-200 bg-white">
+  <div class="mx-auto grid max-w-7xl gap-8 px-5 py-10 sm:px-8 md:grid-cols-[1.4fr_1fr_1fr_1.2fr]">
+    <div>
+      <a class="font-bold tracking-tight text-brand-900" href="/">
+        {site.name}
+      </a>
+      <p class="mt-2 max-w-sm text-sm leading-6 text-slate-600">
+        {site.tagline} Service requests and fulfilment require team review.
+      </p>
+    </div>
+    <div>
+      <h2 class="text-sm font-semibold text-slate-900">Explore</h2>
+      <ul class="mt-3 space-y-2 text-sm text-slate-600">
+        <li>
+          <a class="hover:text-brand-800" href="/services">
+            Services
+          </a>
+        </li>
+        <li>
+          <a class="hover:text-brand-800" href="/promotions">
+            Promotions
+          </a>
+        </li>
+        <li>
+          <a class="hover:text-brand-800" href="/announcements">
+            Announcements
+          </a>
+        </li>
+        <li>
+          <a class="hover:text-brand-800" href="/faq">
+            FAQs
+          </a>
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h2 class="text-sm font-semibold text-slate-900">Information</h2>
+      <ul class="mt-3 space-y-2 text-sm text-slate-600">
+        <li>
+          <a class="hover:text-brand-800" href="/about">
+            About
+          </a>
+        </li>
+        <li>
+          <a class="hover:text-brand-800" href="/contact">
+            Contact
+          </a>
+        </li>
+        <li>
+          <a class="hover:text-brand-800" href="/privacy">
+            Privacy (draft)
+          </a>
+        </li>
+        <li>
+          <a class="hover:text-brand-800" href="/terms">
+            Terms (draft)
+          </a>
+        </li>
+        <li>
+          <a class="hover:text-brand-800" href="/refund-policy">
+            Refund policy (draft)
+          </a>
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h2 class="text-sm font-semibold text-slate-900">Visit or message us</h2>
+      <p class="mt-3 text-sm leading-6 text-slate-600">{site.location}</p>
+      <p class="mt-2 text-sm font-semibold text-emerald-800">
+        {site.openingHours}
+      </p>
+      <a
+        class="mt-3 inline-flex text-sm font-semibold text-brand-800 hover:text-brand-700"
+        href={site.mapsSearchUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        Get directions
+      </a>
+      <p class="mt-2 text-sm text-slate-600">WhatsApp: {site.whatsappNumber}</p>
+    </div>
+  </div>
+  <div class="border-t border-slate-100">
+    <p class="mx-auto max-w-7xl px-5 py-4 text-xs text-slate-500 sm:px-8">
+      © {new Date().getFullYear()} {site.name}. Business policies and service
+      information require owner approval before publication.
+    </p>
+  </div>
+</footer>

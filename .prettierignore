@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.astro/
+pnpm-lock.yaml
+PROJECT_BLUEPRINT.MD
+*.jpg
+*.jpeg
+*.png
+*.webp

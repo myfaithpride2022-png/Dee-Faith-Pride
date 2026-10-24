@@ -1,0 +1,67 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import PageIntro from "@/components/ui/PageIntro.astro";
+
+const questions = [
+  {
+    question: "How do payments work?",
+    answer:
+      "The planned workflow uses manual payment instructions supplied by the business. An administrator must verify a payment before it is marked as paid. No payment gateway is part of this release.",
+  },
+  {
+    question: "Does sending a receipt confirm my payment?",
+    answer:
+      "No. A receipt or transaction reference is information for an administrator to review. It does not automatically confirm that funds were received.",
+  },
+  {
+    question: "Are services fulfilled automatically?",
+    answer:
+      "No. Service fulfilment is manual. An administrator handles the request and updates its status after processing.",
+  },
+  {
+    question: "How much does a service cost?",
+    answer:
+      "Prices and fees have not yet been configured. Confirm the total amount with the business before making any payment.",
+  },
+  {
+    question: "How long will my request take?",
+    answer:
+      "Processing estimates have not yet been supplied. Any applicable timing should be confirmed with the business before a request is placed.",
+  },
+  {
+    question: "Can I book an appointment?",
+    answer:
+      "Appointment booking is not available until working hours and bookable time slots have been configured.",
+  },
+  {
+    question: "What is the refund policy?",
+    answer:
+      "The refund policy is awaiting business-owner approval and has not been published as an approved policy.",
+  },
+];
+---
+
+<BaseLayout
+  title="Frequently asked questions | Dee-Faith Pride Multi-Biz"
+  description="Answers about service requests, manual payment, fulfilment, and appointments."
+>
+  <main id="main-content">
+    <PageIntro
+      eyebrow="Help"
+      title="Frequently asked questions"
+      description="General information about the planned service workflow. Business-specific details remain subject to confirmation."
+    />
+    <section class="mx-auto max-w-4xl px-5 py-12 sm:px-8">
+      <div class="space-y-3">
+        {questions.map((item) => (
+          <details class="group rounded-xl border border-slate-200 bg-white p-5">
+            <summary class="cursor-pointer list-none pr-6 font-semibold text-slate-900 focus-visible:outline-2 focus-visible:outline-brand-700">
+              {item.question}
+            </summary>
+            <p class="mt-3 text-sm leading-6 text-slate-600">{item.answer}</p>
+          </details>
+        ))}
+      </div>
+    </section>
+  </main>
+</BaseLayout>

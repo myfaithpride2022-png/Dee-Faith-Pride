@@ -1,0 +1,238 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import PageIntro from "@/components/ui/PageIntro.astro";
+import OrderForm from "@/components/ui/OrderForm.astro";
+import ServiceEnquiryForm from "@/components/ui/ServiceEnquiryForm.astro";
+import { services } from "@/data/services";
+import { calculateFixedPrice, parseServiceForm } from "@/lib/orders/validation";
+import { site } from "@/data/site";
+import {
+  createPublicSupabaseClient,
+  PublicDatabaseConfigurationError,
+} from "@/lib/supabase/server";
+
+const { slug } = Astro.params;
+const previewService = services.find((entry) => entry.slug === slug);
+let configuredService:
+  | {
+      slug: string;
+      category_id: string | null;
+      name: string;
+      description: string;
+      instructions: string;
+      form_schema: unknown;
+      pricing_type: "fixed" | "quotation";
+      base_price_minor: string | number | null;
+      service_fee_minor: string | number;
+    }
+  | undefined;
+let configuredCategoryName = "Other digital services";
+let databaseUnavailable = false;
+
+if (slug) {
+  try {
+    const supabase = createPublicSupabaseClient();
+    const { data, error } = await supabase
+      .from("services")
+      .select(
+        "slug, category_id, name, description, instructions, form_schema, pricing_type, base_price_minor, service_fee_minor",
+      )
+      .eq("slug", slug)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Unable to load public service details.", error);
+      databaseUnavailable = true;
+      Astro.response.status = 503;
+    } else if (data) {
+      configuredService = data;
+      if (data.category_id) {
+        const { data: category, error: categoryError } = await supabase
+          .from("service_categories")
+          .select("name")
+          .eq("id", data.category_id)
+          .maybeSingle();
+        if (categoryError) {
+          console.error("Unable to load service category.", categoryError);
+        } else if (category) {
+          configuredCategoryName = category.name;
+        }
+      }
+    }
+  } catch (error) {
+    if (error instanceof PublicDatabaseConfigurationError) {
+      databaseUnavailable = true;
+      Astro.response.status = 503;
+    } else {
+      throw error;
+    }
+  }
+}
+
+const service = configuredService
+  ? {
+      slug: configuredService.slug,
+      name: configuredService.name,
+      description: configuredService.description,
+      category: configuredCategoryName,
+      details: [],
+    }
+  : previewService;
+
+if (!service && !databaseUnavailable) Astro.response.status = 404;
+
+const formFields = configuredService
+  ? parseServiceForm(configuredService.form_schema)
+  : null;
+const fixedPrice = configuredService
+  ? calculateFixedPrice(
+      configuredService.pricing_type,
+      configuredService.base_price_minor,
+      configuredService.service_fee_minor,
+    )
+  : null;
+const formattedTotal = fixedPrice
+  ? (() => {
+      const amount = BigInt(fixedPrice.totalMinor);
+      const naira = amount / 100n;
+      const kobo = (amount % 100n).toString().padStart(2, "0");
+      return `₦${new Intl.NumberFormat("en-NG").format(naira)}.${kobo}`;
+    })()
+  : null;
+const activeName = configuredService?.name ?? service?.name;
+const activeDescription =
+  configuredService?.description ?? service?.description;
+const enquiryDetails =
+  configuredService?.instructions && configuredService.instructions.trim()
+    ? [configuredService.instructions]
+    : (service?.details ?? []);
+---
+
+<BaseLayout
+  title={
+    service ? `${activeName} | Dee-Faith Pride Multi-Biz` : "Service not found"
+  }
+  description={activeDescription ?? "The requested service could not be found."}
+>
+  <main id="main-content">
+    {service ? (
+      <>
+        <PageIntro
+          eyebrow={configuredService ? "Available service" : service.category}
+          title={activeName ?? service.name}
+          description={activeDescription ?? service.description}
+        />
+        <section class="mx-auto grid max-w-7xl gap-8 px-5 py-10 sm:px-8 lg:grid-cols-[1fr_20rem]">
+          <div class="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
+            <h2 class="text-xl font-semibold text-brand-900">
+              {configuredService ? "Service information" : "What may be needed"}
+            </h2>
+            <p class="mt-2 text-sm leading-6 text-slate-600">
+              {configuredService?.instructions ||
+                "Tell us what you need and the team will confirm requirements, availability, and price before proceeding."}
+            </p>
+            {configuredService && fixedPrice && (
+              <p class="mt-4 text-base font-semibold text-brand-900">
+                Configured total: {formattedTotal}
+              </p>
+            )}
+            {!configuredService && (
+              <ul class="mt-5 list-inside list-disc space-y-2 text-sm leading-6 text-slate-700">
+                {service.details.map((detail) => (
+                  <li>{detail}</li>
+                ))}
+              </ul>
+            )}
+            {!configuredService && (
+              <>
+                <h2 class="mt-8 text-xl font-semibold text-brand-900">
+                  How to get started
+                </h2>
+                <p class="mt-2 text-sm leading-6 text-slate-600">
+                  Start a WhatsApp enquiry and describe your request. For
+                  printing, graphics, or document work, attach the file in the
+                  WhatsApp chat after it opens.
+                </p>
+              </>
+            )}
+          </div>
+          <aside class="h-fit rounded-2xl border border-amber-200 bg-amber-50 p-5">
+            {databaseUnavailable ? (
+              <>
+                <p class="text-sm font-bold text-amber-950">
+                  Service temporarily unavailable
+                </p>
+                <p class="mt-2 text-sm leading-6 text-amber-900">
+                  We could not verify this service configuration. Please try
+                  again later.
+                </p>
+              </>
+            ) : configuredService && fixedPrice && formFields ? (
+              <>
+                <p class="text-sm font-bold text-amber-950">
+                  Ready to make an enquiry?
+                </p>
+                <p class="mt-2 text-sm leading-6 text-amber-900">
+                  Message us if you have a question. Any payment is handled
+                  manually and verified before the team fulfils an order.
+                </p>
+              </>
+            ) : (
+              <>
+                <p class="text-sm font-bold text-amber-950">
+                  Book or ask a question
+                </p>
+                <p class="mt-2 text-sm leading-6 text-amber-900">
+                  Chat with the team to confirm what you need, current
+                  availability, and the price before work begins.
+                </p>
+              </>
+            )}
+            {databaseUnavailable && (
+              <p class="mt-3 text-xs leading-5 text-amber-900">
+                Live service details could not be refreshed. Contact us to
+                confirm this request before proceeding.
+              </p>
+            )}
+            <a
+              class="mt-4 inline-flex font-semibold text-brand-800 hover:text-brand-700"
+              href="/services"
+            >
+              Back to all services{" "}
+              <span class="ml-2" aria-hidden="true">
+                →
+              </span>
+            </a>
+          </aside>
+        </section>
+        <div class="mx-auto max-w-7xl px-5 pb-8 sm:px-8">
+          <ServiceEnquiryForm
+            serviceName={activeName ?? service.name}
+            serviceDetails={enquiryDetails}
+            whatsappNumber={site.whatsappNumber}
+          />
+        </div>
+        {configuredService && fixedPrice && formFields && (
+          <div class="mx-auto max-w-7xl px-5 pb-12 sm:px-8">
+            <OrderForm serviceSlug={service.slug} fields={formFields} />
+          </div>
+        )}
+      </>
+    ) : (
+      <section class="mx-auto max-w-7xl px-5 py-16 sm:px-8">
+        <h1 class="text-3xl font-semibold text-brand-900">Service not found</h1>
+        <p class="mt-3 text-slate-600">
+          This service may have moved or is not included in the current
+          catalogue.
+        </p>
+        <a
+          class="mt-5 inline-flex font-semibold text-brand-800"
+          href="/services"
+        >
+          Browse services
+        </a>
+      </section>
+    )}
+  </main>
+</BaseLayout>

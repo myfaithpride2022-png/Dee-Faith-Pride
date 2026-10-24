@@ -1,0 +1,112 @@
+---
+interface Props {
+  groups: readonly {
+    label: string;
+    providers: readonly string[];
+  }[];
+}
+
+const { groups } = Astro.props;
+
+function providerStyle(name: string): string {
+  const styles: Record<string, string> = {
+    MTN: "bg-[#ffcb05] text-slate-950",
+    Airtel: "bg-[#e82127] text-white",
+    Glo: "bg-[#00a651] text-white",
+    "9mobile": "bg-[#008b4b] text-white",
+    JAMB: "bg-[#0873a8] text-white",
+    WAEC: "bg-[#683a8f] text-white",
+    NECO: "bg-[#087b45] text-white",
+    NABTEB: "bg-[#b63232] text-white",
+    BEDC: "bg-[#28527a] text-white",
+    DStv: "bg-[#087cba] text-white",
+    GOtv: "bg-[#ee781e] text-white",
+    StarTimes: "bg-[#1b448a] text-white",
+  };
+
+  return styles[name] ?? "bg-brand-900 text-white";
+}
+
+function providerInitials(name: string): string {
+  if (name === "9mobile") return "9m";
+  if (name === "StarTimes") return "ST";
+  return name.slice(0, 1);
+}
+
+function providerLogoUrl(name: string): string | undefined {
+  const logos: Record<string, string> = {
+    MTN: "/images/provider-logos/mtn.png",
+    Airtel: "/images/provider-logos/airtel.png",
+    Glo: "/images/provider-logos/glo.png",
+    "9mobile": "/images/provider-logos/9mobile.png",
+    JAMB: "/images/provider-logos/jamb.png",
+    WAEC: "/images/provider-logos/waec.png",
+    NECO: "/images/provider-logos/neco.png",
+    NABTEB: "/images/provider-logos/nabteb.png",
+    BEDC: "/images/provider-logos/bedc.png",
+    DStv: "/images/provider-logos/dstv.png",
+    GOtv: "/images/provider-logos/gotv.png",
+    StarTimes: "/images/provider-logos/startimes.png",
+  };
+  return logos[name];
+}
+---
+
+<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+  {groups.map((group) => (
+    <div class="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+      <h3 class="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500">
+        {group.label}
+      </h3>
+      <div class="mt-3 grid grid-cols-2 gap-2">
+        {group.providers.map((provider) => (
+          <div class="flex min-h-14 items-center gap-2 rounded-xl border border-slate-200/80 bg-white p-2 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md">
+            <span class="relative grid size-9 shrink-0 place-items-center overflow-hidden rounded-lg bg-white">
+              <span
+                class:list={[
+                  "absolute inset-0 grid place-items-center text-xs font-black tracking-tight",
+                  providerLogoUrl(provider) ? "opacity-0" : "opacity-100",
+                  providerStyle(provider),
+                ]}
+                data-provider-logo-fallback
+                aria-hidden="true"
+              >
+                {providerInitials(provider)}
+              </span>
+              {providerLogoUrl(provider) && (
+                <img
+                  class="relative z-10 size-9 object-contain"
+                  src={providerLogoUrl(provider)}
+                  alt=""
+                  width="36"
+                  height="36"
+                  decoding="async"
+                  data-provider-logo
+                />
+              )}
+            </span>
+            <span class="text-sm font-bold tracking-tight text-slate-800">
+              {provider}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  ))}
+</div>
+
+<script>
+  document
+    .querySelectorAll<HTMLImageElement>("[data-provider-logo]")
+    .forEach((image) => {
+      const useFallback = () => {
+        image.hidden = true;
+        image.parentElement
+          ?.querySelector<HTMLElement>("[data-provider-logo-fallback]")
+          ?.classList.add("!opacity-100");
+      };
+
+      image.addEventListener("error", useFallback, { once: true });
+      if (image.complete && image.naturalWidth === 0) useFallback();
+    });
+</script>

@@ -1,0 +1,414 @@
+---
+import type { ServiceFormField } from "@/lib/orders/validation";
+
+interface Props {
+  serviceSlug: string;
+  fields: ServiceFormField[];
+}
+
+const { serviceSlug, fields } = Astro.props;
+---
+
+<section
+  class="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8"
+  aria-labelledby="order-form-heading"
+>
+  <h2 id="order-form-heading" class="text-xl font-semibold text-brand-900">
+    Request this service
+  </h2>
+  <p class="mt-2 text-sm leading-6 text-slate-600">
+    Your request will be saved for review. Payment is manual; an administrator
+    must verify it before the team begins fulfilment.
+  </p>
+  <form class="mt-6 space-y-5" data-order-form data-service-slug={serviceSlug}>
+    <div>
+      <label
+        class="mb-1.5 block text-sm font-medium text-slate-800"
+        for="customer-name"
+      >
+        Full name
+      </label>
+      <input
+        class="min-h-11 w-full rounded-lg border border-slate-300 px-3 text-sm"
+        id="customer-name"
+        name="customerName"
+        autocomplete="name"
+        required
+        minlength="2"
+        maxlength="120"
+      />
+    </div>
+    <div class="grid gap-5 sm:grid-cols-2">
+      <div>
+        <label
+          class="mb-1.5 block text-sm font-medium text-slate-800"
+          for="customer-phone"
+        >
+          Phone number
+        </label>
+        <input
+          class="min-h-11 w-full rounded-lg border border-slate-300 px-3 text-sm"
+          id="customer-phone"
+          name="customerPhone"
+          type="tel"
+          autocomplete="tel"
+          required
+          minlength="7"
+          maxlength="25"
+        />
+      </div>
+      <div>
+        <label
+          class="mb-1.5 block text-sm font-medium text-slate-800"
+          for="customer-email"
+        >
+          Email <span class="font-normal text-slate-500">(optional)</span>
+        </label>
+        <input
+          class="min-h-11 w-full rounded-lg border border-slate-300 px-3 text-sm"
+          id="customer-email"
+          name="customerEmail"
+          type="email"
+          autocomplete="email"
+          maxlength="254"
+        />
+      </div>
+    </div>
+    {fields.map((field) => (
+      <div>
+        <label
+          class="mb-1.5 block text-sm font-medium text-slate-800"
+          for={`service-${field.name}`}
+        >
+          {field.label}
+        </label>
+        {field.type === "select" ? (
+          <select
+            class="min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm"
+            id={`service-${field.name}`}
+            name={`service_${field.name}`}
+            required={field.required}
+          >
+            <option value="">Select an option</option>
+            {field.options?.map((option) => (
+              <option value={option}>{option}</option>
+            ))}
+          </select>
+        ) : (
+          <input
+            class="min-h-11 w-full rounded-lg border border-slate-300 px-3 text-sm"
+            id={`service-${field.name}`}
+            name={`service_${field.name}`}
+            type={field.type === "phone" ? "tel" : field.type}
+            required={field.required}
+            maxlength={field.maxLength ?? 500}
+          />
+        )}
+      </div>
+    ))}
+    <div>
+      <label
+        class="mb-1.5 block text-sm font-medium text-slate-800"
+        for="customer-notes"
+      >
+        Additional notes{" "}
+        <span class="font-normal text-slate-500">(optional)</span>
+      </label>
+      <textarea
+        class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+        id="customer-notes"
+        name="customerNotes"
+        rows="3"
+        maxlength="1000"
+      ></textarea>
+    </div>
+    <button
+      class="inline-flex min-h-11 items-center justify-center rounded-lg bg-brand-800 px-5 text-sm font-semibold text-white hover:bg-brand-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-700 disabled:cursor-wait disabled:opacity-60"
+      type="submit"
+    >
+      Submit service request
+    </button>
+    <p class="text-xs leading-5 text-slate-500">
+      Do not include passwords or other account secrets. Do not make a payment
+      until the business provides verified instructions.
+    </p>
+    <p
+      class="text-sm text-slate-700"
+      data-order-status
+      role="status"
+      aria-live="polite"
+    ></p>
+  </form>
+  <section
+    class="mt-6 hidden rounded-xl border border-emerald-200 bg-emerald-50 p-5"
+    data-order-confirmation
+    aria-labelledby="order-confirmation-heading"
+  >
+    <h3
+      class="text-lg font-semibold text-emerald-950"
+      id="order-confirmation-heading"
+    >
+      Request received
+    </h3>
+    <p class="mt-2 text-sm leading-6 text-emerald-900" data-order-summary></p>
+    <p class="mt-3 break-all text-xs leading-5 text-emerald-900">
+      Private order token for payment reporting (keep it safe; do not share it):
+      <strong data-order-token></strong>
+    </p>
+    <p class="mt-4 text-sm leading-6 text-emerald-900">
+      Only report a payment after you have received and verified payment
+      instructions from the business. Reporting a payment does not confirm it;
+      an administrator checks it manually. Do not upload or send passwords,
+      PINs, or one-time codes.
+    </p>
+    <form class="mt-5 space-y-4" data-payment-report>
+      <input type="hidden" name="orderReference" />
+      <input type="hidden" name="trackingToken" />
+      <div class="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label
+            class="mb-1.5 block text-sm font-medium text-slate-800"
+            for="payment-amount"
+          >
+            Amount paid (NGN)
+          </label>
+          <input
+            class="min-h-11 w-full rounded-lg border border-slate-300 px-3 text-sm"
+            id="payment-amount"
+            name="amountNaira"
+            type="number"
+            min="0.01"
+            step="0.01"
+            required
+          />
+        </div>
+        <div>
+          <label
+            class="mb-1.5 block text-sm font-medium text-slate-800"
+            for="payment-date"
+          >
+            Payment date{" "}
+            <span class="font-normal text-slate-500">(optional)</span>
+          </label>
+          <input
+            class="min-h-11 w-full rounded-lg border border-slate-300 px-3 text-sm"
+            id="payment-date"
+            name="paymentDate"
+            type="date"
+          />
+        </div>
+      </div>
+      <div>
+        <label
+          class="mb-1.5 block text-sm font-medium text-slate-800"
+          for="payment-reference"
+        >
+          Transaction reference{" "}
+          <span class="font-normal text-slate-500">(optional)</span>
+        </label>
+        <input
+          class="min-h-11 w-full rounded-lg border border-slate-300 px-3 text-sm"
+          id="payment-reference"
+          name="paymentReference"
+          maxlength="120"
+        />
+      </div>
+      <div>
+        <label
+          class="mb-1.5 block text-sm font-medium text-slate-800"
+          for="payment-note"
+        >
+          Note <span class="font-normal text-slate-500">(optional)</span>
+        </label>
+        <textarea
+          class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          id="payment-note"
+          name="customerNote"
+          rows="2"
+          maxlength="1000"
+        ></textarea>
+      </div>
+      <button
+        class="inline-flex min-h-11 items-center justify-center rounded-lg bg-brand-800 px-5 text-sm font-semibold text-white hover:bg-brand-900 disabled:cursor-wait disabled:opacity-60"
+        type="submit"
+      >
+        Report payment for manual review
+      </button>
+      <p
+        class="text-sm text-slate-700"
+        data-payment-status
+        role="status"
+        aria-live="polite"
+      ></p>
+    </form>
+  </section>
+</section>
+
+<script>
+  interface OrderResponse {
+    order?: {
+      reference?: string;
+      totalMinor?: string | number;
+      currency?: string;
+    };
+    trackingToken?: string;
+    error?: string;
+    message?: string;
+  }
+
+  const form = document.querySelector<HTMLFormElement>("[data-order-form]");
+  const status = document.querySelector<HTMLElement>("[data-order-status]");
+  const confirmation = document.querySelector<HTMLElement>(
+    "[data-order-confirmation]",
+  );
+  const paymentForm = document.querySelector<HTMLFormElement>(
+    "[data-payment-report]",
+  );
+
+  form?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (!status) return;
+
+    const button = form.querySelector<HTMLButtonElement>(
+      'button[type="submit"]',
+    );
+    if (!button) return;
+    button.disabled = true;
+    status.textContent = "Submitting your request…";
+
+    const formData = new FormData(form);
+    const serviceDetails: Record<string, string> = {};
+    for (const [name, value] of formData.entries()) {
+      if (name.startsWith("service_") && typeof value === "string") {
+        serviceDetails[name.slice("service_".length)] = value;
+      }
+    }
+
+    const payload = {
+      serviceSlug: form.dataset.serviceSlug,
+      customerName: formData.get("customerName"),
+      customerPhone: formData.get("customerPhone"),
+      customerEmail: formData.get("customerEmail") || "",
+      customerNotes: formData.get("customerNotes") || "",
+      serviceDetails,
+    };
+
+    try {
+      const response = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const result = (await response.json()) as OrderResponse;
+      if (
+        !response.ok ||
+        !result.order?.reference ||
+        result.order.totalMinor === undefined ||
+        !result.trackingToken ||
+        !confirmation
+      ) {
+        status.textContent =
+          result.error ?? "We could not submit your request. Please try again.";
+        return;
+      }
+
+      const totalMinor = BigInt(result.order.totalMinor);
+      const amountNaira = `${totalMinor / 100n}.${(totalMinor % 100n)
+        .toString()
+        .padStart(2, "0")}`;
+      const summary = confirmation.querySelector<HTMLElement>(
+        "[data-order-summary]",
+      );
+      const token =
+        confirmation.querySelector<HTMLElement>("[data-order-token]");
+      const referenceInput = paymentForm?.elements.namedItem(
+        "orderReference",
+      ) as HTMLInputElement | null;
+      const tokenInput = paymentForm?.elements.namedItem(
+        "trackingToken",
+      ) as HTMLInputElement | null;
+      const amountInput = paymentForm?.elements.namedItem(
+        "amountNaira",
+      ) as HTMLInputElement | null;
+      if (
+        !summary ||
+        !token ||
+        !referenceInput ||
+        !tokenInput ||
+        !amountInput
+      ) {
+        status.textContent =
+          "Your request was saved, but payment reporting is unavailable. Contact the business with your order reference.";
+        return;
+      }
+
+      summary.textContent = `Order ${result.order.reference} was received. The confirmed order total is NGN ${amountNaira}.`;
+      token.textContent = result.trackingToken;
+      referenceInput.value = result.order.reference;
+      tokenInput.value = result.trackingToken;
+      amountInput.value = amountNaira;
+      form.hidden = true;
+      confirmation.classList.remove("hidden");
+    } catch {
+      status.textContent =
+        "We could not reach the service. Please check your connection and try again.";
+    } finally {
+      button.disabled = false;
+    }
+  });
+
+  paymentForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const status = paymentForm.querySelector<HTMLElement>(
+      "[data-payment-status]",
+    );
+    const button = paymentForm.querySelector<HTMLButtonElement>(
+      'button[type="submit"]',
+    );
+    if (!status || !button) return;
+
+    button.disabled = true;
+    status.textContent = "Sending your payment report for manual review…";
+    const formData = new FormData(paymentForm);
+
+    try {
+      const response = await fetch("/api/payments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orderReference: formData.get("orderReference"),
+          trackingToken: formData.get("trackingToken"),
+          amountNaira: formData.get("amountNaira"),
+          paymentReference: formData.get("paymentReference") || "",
+          paymentDate: formData.get("paymentDate") || "",
+          customerNote: formData.get("customerNote") || "",
+        }),
+      });
+      const result = (await response.json()) as {
+        error?: string;
+        message?: string;
+      };
+      if (!response.ok) {
+        status.textContent =
+          result.error ?? "We could not submit the payment report.";
+        return;
+      }
+
+      status.textContent =
+        result.message ??
+        "Payment report received and awaiting manual administrator review.";
+      paymentForm
+        .querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(
+          "input:not([type=hidden]), textarea",
+        )
+        .forEach((input) => {
+          input.disabled = true;
+        });
+    } catch {
+      status.textContent =
+        "We could not reach the service. Please check your connection and try again.";
+    } finally {
+      button.disabled = false;
+    }
+  });
+</script>

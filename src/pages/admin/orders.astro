@@ -1,0 +1,471 @@
+---
+import AdminLayout from "@/layouts/AdminLayout.astro";
+import {
+  AuthConfigurationError,
+  createRequestSupabaseClient,
+  getActiveStaff,
+} from "@/lib/supabase/auth";
+import type {
+  OrderRow,
+  PaymentSubmissionRow,
+} from "@/lib/supabase/database.types";
+
+let profile = null;
+type AdminOrder = Pick<
+  OrderRow,
+  | "id"
+  | "order_reference"
+  | "customer_name"
+  | "customer_email"
+  | "customer_phone"
+  | "service_name_snapshot"
+  | "total_minor"
+  | "payment_status"
+  | "fulfilment_status"
+  | "customer_notes"
+  | "created_at"
+>;
+type AdminPaymentSubmission = Pick<
+  PaymentSubmissionRow,
+  | "id"
+  | "order_id"
+  | "amount_reported_minor"
+  | "payment_reference"
+  | "payment_date"
+  | "status"
+  | "rejection_reason"
+  | "customer_note"
+  | "created_at"
+>;
+let adminOrders: AdminOrder[] = [];
+let adminSubmissions: AdminPaymentSubmission[] = [];
+let unavailable = false;
+let loadError = "";
+Astro.response.headers.set("Cache-Control", "private, no-store");
+
+try {
+  const supabase = createRequestSupabaseClient(Astro.request, Astro.cookies);
+  const staff = await getActiveStaff(supabase);
+  if (!staff) return Astro.redirect("/admin/login");
+  profile = staff.profile;
+
+  const [ordersResult, submissionsResult] = await Promise.all([
+    supabase
+      .from("orders")
+      .select(
+        "id, order_reference, customer_name, customer_email, customer_phone, service_name_snapshot, total_minor, payment_status, fulfilment_status, customer_notes, created_at",
+      )
+      .order("created_at", { ascending: false })
+      .limit(100),
+    supabase
+      .from("payment_submissions")
+      .select(
+        "id, order_id, amount_reported_minor, payment_reference, payment_date, status, rejection_reason, customer_note, created_at",
+      )
+      .order("created_at", { ascending: false })
+      .limit(100),
+  ]);
+
+  if (ordersResult.error || submissionsResult.error) {
+    console.error(
+      "Unable to load admin orders.",
+      ordersResult.error ?? submissionsResult.error,
+    );
+    loadError =
+      "Orders could not be loaded. Check Supabase access and refresh the page.";
+  } else {
+    adminOrders = ordersResult.data;
+    adminSubmissions = submissionsResult.data;
+  }
+} catch (error) {
+  if (error instanceof AuthConfigurationError) {
+    Astro.response.status = 503;
+    unavailable = true;
+  } else {
+    throw error;
+  }
+}
+
+function formatNaira(minorUnits: number | string): string {
+  const minor = BigInt(minorUnits);
+  const naira = minor / 100n;
+  const kobo = (minor % 100n).toString().padStart(2, "0");
+  return `₦${new Intl.NumberFormat("en-NG").format(naira)}.${kobo}`;
+}
+
+function formatDate(value: string): string {
+  return new Intl.DateTimeFormat("en-NG", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(value));
+}
+
+function nextFulfilmentStatuses(status: OrderRow["fulfilment_status"]) {
+  switch (status) {
+    case "not_started":
+      return ["queued", "cancelled"];
+    case "queued":
+      return ["processing", "cancelled"];
+    case "processing":
+      return ["completed", "failed", "cancelled"];
+    case "failed":
+      return ["processing", "cancelled"];
+    default:
+      return [];
+  }
+}
+
+const ordersById = new Map(adminOrders.map((order) => [order.id, order]));
+---
+
+{unavailable ? (
+  <main id="main-content" class="mx-auto max-w-3xl px-5 py-16 sm:px-8">
+    <h1 class="text-2xl font-semibold text-brand-900">Admin unavailable</h1>
+    <p class="mt-3 text-slate-600">
+      Supabase authentication is not configured on this server.
+    </p>
+  </main>
+) : profile ? (
+  <AdminLayout title="Orders" profile={profile}>
+    <main id="main-content" class="mx-auto max-w-7xl px-5 py-12 sm:px-8">
+      <p class="text-xs font-bold uppercase tracking-[0.16em] text-brand-700">
+        Manual operations
+      </p>
+      <h1 class="mt-2 text-3xl font-semibold tracking-tight text-brand-900">
+        Orders & payment review
+      </h1>
+      <p class="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
+        Compare each customer report with the business’s actual payment records.
+        Confirm or reject it manually. Only confirmed payments can move into
+        fulfilment. The site does not collect payments or verify transfers
+        automatically.
+      </p>
+
+      {loadError && (
+        <p
+          class="mt-6 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900"
+          role="alert"
+        >
+          {loadError}
+        </p>
+      )}
+
+      <section class="mt-10" aria-labelledby="payment-reports-heading">
+        <div class="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2
+              class="text-xl font-semibold text-brand-900"
+              id="payment-reports-heading"
+            >
+              Customer payment reports
+            </h2>
+            <p class="mt-1 text-sm text-slate-600">
+              Review the newest 100 reports. A report is not proof of payment.
+            </p>
+          </div>
+          <a
+            class="text-sm font-semibold text-brand-800 hover:text-brand-700"
+            href="/admin/orders"
+          >
+            Refresh
+          </a>
+        </div>
+
+        <div class="mt-4 grid gap-4">
+          {adminSubmissions.map((submission) => {
+            const order = ordersById.get(submission.order_id);
+            return (
+              <article class="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
+                <div class="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h3 class="font-semibold text-slate-950">
+                      {order?.order_reference ?? "Order no longer available"}
+                    </h3>
+                    <p class="mt-1 text-sm text-slate-600">
+                      {order?.customer_name ?? "Unknown customer"} ·{" "}
+                      {order?.service_name_snapshot ?? "Unknown service"}
+                    </p>
+                    {order && (
+                      <p class="mt-1 text-sm text-slate-600">
+                        {order.customer_phone}
+                        {order.customer_email
+                          ? ` · ${order.customer_email}`
+                          : ""}
+                      </p>
+                    )}
+                  </div>
+                  <span class="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold capitalize text-amber-900">
+                    {submission.status.replaceAll("_", " ")}
+                  </span>
+                </div>
+                <dl class="mt-4 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
+                  <div>
+                    <dt class="text-slate-500">Reported amount</dt>
+                    <dd class="mt-1 font-semibold text-slate-900">
+                      {formatNaira(submission.amount_reported_minor)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt class="text-slate-500">Order total</dt>
+                    <dd class="mt-1 font-semibold text-slate-900">
+                      {order ? formatNaira(order.total_minor) : "Unavailable"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt class="text-slate-500">Payment date</dt>
+                    <dd class="mt-1 text-slate-900">
+                      {submission.payment_date ?? "Not provided"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt class="text-slate-500">Reported</dt>
+                    <dd class="mt-1 text-slate-900">
+                      {formatDate(submission.created_at)}
+                    </dd>
+                  </div>
+                </dl>
+                <p class="mt-4 text-sm text-slate-700">
+                  Transaction reference:{" "}
+                  {submission.payment_reference || "Not provided"}
+                </p>
+                {submission.customer_note && (
+                  <p class="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-700">
+                    Customer note: {submission.customer_note}
+                  </p>
+                )}
+                {submission.rejection_reason && (
+                  <p class="mt-2 text-sm text-rose-800">
+                    Previous rejection reason: {submission.rejection_reason}
+                  </p>
+                )}
+                {order && (
+                  <a
+                    class="mt-3 inline-flex text-sm font-semibold text-brand-800 hover:text-brand-700"
+                    href={`https://wa.me/${order.customer_phone.replace(/\D/g, "").replace(/^0/, "234")}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Contact customer in WhatsApp
+                  </a>
+                )}
+                {["submitted", "under_review"].includes(submission.status) && (
+                  <div class="mt-5 flex flex-wrap items-end gap-3 border-t border-slate-100 pt-4">
+                    <form class="admin-order-action" data-admin-order-action>
+                      <input
+                        type="hidden"
+                        name="action"
+                        value="review-payment"
+                      />
+                      <input
+                        type="hidden"
+                        name="submissionId"
+                        value={submission.id}
+                      />
+                      <input type="hidden" name="decision" value="confirmed" />
+                      <button
+                        class="min-h-10 rounded-lg bg-emerald-700 px-4 text-sm font-semibold text-white hover:bg-emerald-800 disabled:opacity-60"
+                        type="submit"
+                      >
+                        Confirm verified payment
+                      </button>
+                    </form>
+                    <form
+                      class="admin-order-action flex min-w-64 flex-1 items-end gap-2"
+                      data-admin-order-action
+                    >
+                      <input
+                        type="hidden"
+                        name="action"
+                        value="review-payment"
+                      />
+                      <input
+                        type="hidden"
+                        name="submissionId"
+                        value={submission.id}
+                      />
+                      <input type="hidden" name="decision" value="rejected" />
+                      <label class="flex-1 text-xs font-medium text-slate-700">
+                        Reason to reject
+                        <input
+                          class="mt-1 min-h-10 w-full rounded-lg border border-slate-300 px-3 text-sm"
+                          name="rejectionReason"
+                          maxlength="1000"
+                          required
+                        />
+                      </label>
+                      <button
+                        class="min-h-10 rounded-lg border border-rose-300 px-4 text-sm font-semibold text-rose-800 hover:bg-rose-50 disabled:opacity-60"
+                        type="submit"
+                      >
+                        Reject
+                      </button>
+                    </form>
+                  </div>
+                )}
+                <p
+                  class="mt-3 text-sm text-slate-700"
+                  data-admin-order-status
+                  role="status"
+                  aria-live="polite"
+                ></p>
+              </article>
+            );
+          })}
+          {adminSubmissions.length === 0 && !loadError && (
+            <p class="rounded-xl border border-slate-200 bg-white p-5 text-sm text-slate-600">
+              No customer payment reports have been submitted yet.
+            </p>
+          )}
+        </div>
+      </section>
+
+      <section class="mt-12" aria-labelledby="all-orders-heading">
+        <h2
+          class="text-xl font-semibold text-brand-900"
+          id="all-orders-heading"
+        >
+          Recent orders
+        </h2>
+        <div class="mt-4 grid gap-4">
+          {adminOrders.map((order) => {
+            const nextStatuses = nextFulfilmentStatuses(
+              order.fulfilment_status,
+            ).filter(
+              (status) =>
+                status === "cancelled" || order.payment_status === "confirmed",
+            );
+            return (
+              <article class="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
+                <div class="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h3 class="font-semibold text-slate-950">
+                      {order.order_reference} · {order.service_name_snapshot}
+                    </h3>
+                    <p class="mt-1 text-sm text-slate-600">
+                      {order.customer_name} · {order.customer_phone}
+                    </p>
+                    <p class="mt-1 text-xs text-slate-500">
+                      Created {formatDate(order.created_at)}
+                    </p>
+                  </div>
+                  <p class="text-right text-sm font-semibold text-slate-900">
+                    {formatNaira(order.total_minor)}
+                    <span class="mt-1 block text-xs font-medium text-slate-600">
+                      Payment: {order.payment_status.replaceAll("_", " ")}
+                    </span>
+                    <span class="mt-1 block text-xs font-medium text-slate-600">
+                      Fulfilment: {order.fulfilment_status.replaceAll("_", " ")}
+                    </span>
+                  </p>
+                </div>
+                {order.customer_notes && (
+                  <p class="mt-4 whitespace-pre-wrap text-sm leading-6 text-slate-700">
+                    Customer notes: {order.customer_notes}
+                  </p>
+                )}
+                {nextStatuses.length > 0 && (
+                  <form
+                    class="admin-order-action mt-4 grid gap-3 border-t border-slate-100 pt-4 sm:grid-cols-[1fr_1fr_auto]"
+                    data-admin-order-action
+                  >
+                    <input
+                      type="hidden"
+                      name="action"
+                      value="update-fulfilment"
+                    />
+                    <input type="hidden" name="orderId" value={order.id} />
+                    <label class="text-xs font-medium text-slate-700">
+                      Next manual status
+                      <select
+                        class="mt-1 min-h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm"
+                        name="status"
+                        required
+                      >
+                        {nextStatuses.map((status) => (
+                          <option value={status}>
+                            {status.replaceAll("_", " ")}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label class="text-xs font-medium text-slate-700">
+                      Staff note (optional)
+                      <input
+                        class="mt-1 min-h-10 w-full rounded-lg border border-slate-300 px-3 text-sm"
+                        name="note"
+                        maxlength="1000"
+                      />
+                    </label>
+                    <button
+                      class="min-h-10 self-end rounded-lg bg-brand-800 px-4 text-sm font-semibold text-white hover:bg-brand-900 disabled:opacity-60"
+                      type="submit"
+                    >
+                      Update status
+                    </button>
+                  </form>
+                )}
+                <p
+                  class="mt-3 text-sm text-slate-700"
+                  data-admin-order-status
+                  role="status"
+                  aria-live="polite"
+                ></p>
+              </article>
+            );
+          })}
+          {adminOrders.length === 0 && !loadError && (
+            <p class="rounded-xl border border-slate-200 bg-white p-5 text-sm text-slate-600">
+              No orders have been created yet.
+            </p>
+          )}
+        </div>
+      </section>
+    </main>
+  </AdminLayout>
+) : null}
+
+<script>
+  document
+    .querySelectorAll<HTMLFormElement>("[data-admin-order-action]")
+    .forEach((form) => {
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const button = form.querySelector<HTMLButtonElement>(
+          'button[type="submit"]',
+        );
+        const status = form
+          .closest("article")
+          ?.querySelector<HTMLElement>("[data-admin-order-status]");
+        if (!button || !status) return;
+
+        button.disabled = true;
+        status.textContent = "Saving update…";
+        const payload = Object.fromEntries(new FormData(form).entries());
+        let saved = false;
+
+        try {
+          const response = await fetch("/api/admin/orders", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          const result = (await response.json()) as {
+            error?: string;
+            message?: string;
+          };
+          if (!response.ok) {
+            status.textContent =
+              result.error ?? "The update could not be saved.";
+            return;
+          }
+          status.textContent = result.message ?? "Update saved.";
+          saved = true;
+        } catch {
+          status.textContent =
+            "The server could not be reached. Check your connection and refresh before retrying.";
+        } finally {
+          button.disabled = saved;
+        }
+      });
+    });
+</script>

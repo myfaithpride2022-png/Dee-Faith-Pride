@@ -1,0 +1,36 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import PageIntro from "@/components/ui/PageIntro.astro";
+---
+
+<BaseLayout
+  title="Refund policy (draft) | Dee-Faith Pride Multi-Biz"
+  description="Draft refund-policy page awaiting business-owner approval."
+>
+  <main id="main-content">
+    <PageIntro
+      eyebrow="Draft · Owner approval required"
+      title="Refund policy"
+      description="No refund terms have been supplied or approved by the business."
+    />
+    <section class="mx-auto max-w-4xl px-5 py-12 sm:px-8">
+      <div class="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-sm leading-7 text-amber-950">
+        <p class="font-semibold">This is not an approved refund policy</p>
+        <p class="mt-2">
+          The business owner must supply and approve refund eligibility,
+          timelines, process, and customer contact details before this
+          information is published. No refund outcome is promised by this
+          placeholder.
+        </p>
+      </div>
+      <h2 class="mt-8 text-xl font-semibold text-brand-900">
+        Payment and refund records
+      </h2>
+      <p class="mt-3 text-sm leading-7 text-slate-600">
+        Payment status and any refund decision must be reviewed and recorded by
+        authorised staff. Do not treat a customer-uploaded receipt as a refund
+        approval or payment confirmation.
+      </p>
+    </section>
+  </main>
+</BaseLayout>

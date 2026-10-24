@@ -1,0 +1,35 @@
+---
+import SiteHeader from "@/components/layout/SiteHeader.astro";
+import SiteFooter from "@/components/layout/SiteFooter.astro";
+import { site } from "@/data/site";
+import "@/styles/global.css";
+
+interface Props {
+  title?: string;
+  description?: string;
+}
+
+const { title = site.name, description = site.description } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en-NG">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#102c4d" />
+    <title>{title}</title>
+  </head>
+  <body class="min-h-screen bg-canvas font-sans text-slate-900 antialiased">
+    <a
+      class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-white focus:px-4 focus:py-3 focus:text-brand-900 focus:shadow-lg"
+      href="#main-content"
+    >
+      Skip to main content
+    </a>
+    <SiteHeader />
+    <slot />
+    <SiteFooter />
+  </body>
+</html>

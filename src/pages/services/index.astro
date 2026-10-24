@@ -1,0 +1,293 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import PageIntro from "@/components/ui/PageIntro.astro";
+import ServiceCard from "@/components/ui/ServiceCard.astro";
+import ProviderMarks from "@/components/ui/ProviderMarks.astro";
+import {
+  categories as providedCategories,
+  providerGroups,
+  services as providedServices,
+} from "@/data/services";
+import {
+  createPublicSupabaseClient,
+  PublicDatabaseConfigurationError,
+} from "@/lib/supabase/server";
+
+type CatalogCategory = { id?: string; slug: string; name: string };
+type CatalogService = {
+  slug: string;
+  name: string;
+  description: string;
+  category: string;
+  categorySlug: string;
+  priceLabel?: string;
+  details?: string[];
+};
+
+let categories: CatalogCategory[] = [...providedCategories];
+let services: CatalogService[] = providedServices.map((service) => ({
+  ...service,
+  priceLabel: "Message us for current price and availability",
+}));
+let catalogNotice = "";
+
+try {
+  const supabase = createPublicSupabaseClient();
+  const [categoryResult, serviceResult] = await Promise.all([
+    supabase
+      .from("service_categories")
+      .select("id, name, slug")
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true })
+      .order("name", { ascending: true }),
+    supabase
+      .from("services")
+      .select(
+        "slug, name, description, category_id, pricing_type, base_price_minor, service_fee_minor",
+      )
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true })
+      .order("name", { ascending: true }),
+  ]);
+
+  if (categoryResult.error || serviceResult.error) {
+    console.error(
+      "Unable to load live catalogue updates.",
+      categoryResult.error ?? serviceResult.error,
+    );
+    catalogNotice =
+      "Some live catalogue updates could not be loaded. You can still enquire about the listed services.";
+  } else {
+    const databaseCategories = categoryResult.data ?? [];
+    categories = [
+      ...categories,
+      ...databaseCategories.filter(
+        (category) =>
+          !categories.some((existing) => existing.slug === category.slug),
+      ),
+    ];
+    const categoryById = new Map(
+      databaseCategories.map((category) => [category.id, category]),
+    );
+
+    for (const service of serviceResult.data ?? []) {
+      const category = service.category_id
+        ? categoryById.get(service.category_id)
+        : undefined;
+      let priceLabel = "Message us for a quote";
+      if (service.pricing_type === "fixed") {
+        const totalMinor =
+          BigInt(service.base_price_minor ?? 0) +
+          BigInt(service.service_fee_minor);
+        const naira = totalMinor / 100n;
+        const kobo = (totalMinor % 100n).toString().padStart(2, "0");
+        priceLabel = `₦${new Intl.NumberFormat("en-NG").format(naira)}.${kobo}`;
+      }
+
+      const existingService = services.find(
+        (entry) => entry.slug === service.slug,
+      );
+      const liveService = {
+        slug: service.slug,
+        name: service.name,
+        description: service.description,
+        category: category?.name ?? "Other digital services",
+        categorySlug: category?.slug ?? "other-digital-services",
+        priceLabel,
+        details: existingService?.details,
+      };
+      const existingIndex = services.findIndex(
+        (entry) => entry.slug === liveService.slug,
+      );
+      if (existingIndex >= 0) services[existingIndex] = liveService;
+      else services.push(liveService);
+    }
+  }
+} catch (error) {
+  if (!(error instanceof PublicDatabaseConfigurationError)) throw error;
+}
+---
+
+<BaseLayout
+  title="Services | Dee-Faith Pride Multi-Biz"
+  description="Browse cybercafé, printing, registration, design, bill-payment, and TV subscription services."
+>
+  <main id="main-content">
+    <PageIntro
+      eyebrow="Cybercafé & digital services"
+      title="What can we help you with?"
+      description="Choose a service to see what to prepare, then book or ask a question directly on WhatsApp. We’ll confirm availability, requirements, and the current price with you."
+    />
+    <section class="mx-auto max-w-7xl px-5 py-10 sm:px-8">
+      {catalogNotice ? (
+        <div
+          class="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-950"
+          role="status"
+        >
+          {catalogNotice}
+        </div>
+      ) : (
+        <div class="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-950">
+          Prices are confirmed with you before work begins. Payment is manual
+          using verified business instructions; the team handles fulfilment.
+        </div>
+      )}
+
+      <section
+        class="mt-7 rounded-2xl border border-slate-200 bg-white p-5 sm:p-6"
+        aria-label="Supported service providers"
+      >
+        <div class="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p class="text-xs font-bold uppercase tracking-[0.16em] text-brand-700">
+              Popular providers
+            </p>
+            <h2 class="mt-1 text-lg font-semibold text-brand-900">
+              Services across familiar networks and providers
+            </h2>
+          </div>
+          <p class="text-xs text-slate-500">
+            Provider names identify the type of request; availability is
+            confirmed individually.
+          </p>
+        </div>
+        <div class="mt-5">
+          <ProviderMarks groups={providerGroups} />
+        </div>
+        <p class="mt-4 text-xs leading-5 text-slate-500">
+          Provider marks are shown for service selection only. Dee-Faith Pride
+          Multi-Biz does not claim affiliation with these organisations.
+        </p>
+      </section>
+
+      <div class="mt-7 grid gap-4 sm:grid-cols-[1fr_15rem]">
+        <div>
+          <label
+            class="mb-2 block text-sm font-semibold text-slate-800"
+            for="service-search"
+          >
+            Search services
+          </label>
+          <input
+            class="min-h-12 w-full rounded-lg border border-slate-300 bg-white px-4 text-base outline-none focus:border-brand-700 focus:ring-2 focus:ring-brand-100"
+            id="service-search"
+            type="search"
+            placeholder="Try printing, JAMB, banner, or electricity"
+            autocomplete="off"
+          />
+        </div>
+        <div>
+          <label
+            class="mb-2 block text-sm font-semibold text-slate-800"
+            for="category-filter"
+          >
+            Category
+          </label>
+          <select
+            class="min-h-12 w-full rounded-lg border border-slate-300 bg-white px-4 text-base outline-none focus:border-brand-700 focus:ring-2 focus:ring-brand-100"
+            id="category-filter"
+          >
+            <option value="">All categories</option>
+            {categories.map((category) => (
+              <option value={category.slug}>{category.name}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <nav
+        class="mt-4 -mx-5 flex gap-2 overflow-x-auto px-5 pb-2 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0"
+        aria-label="Quick service categories"
+      >
+        {categories.map((category) => (
+          <a
+            class="min-h-10 shrink-0 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-brand-700 hover:text-brand-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-700"
+            href={`/services?category=${category.slug}#service-list`}
+          >
+            {category.name}
+          </a>
+        ))}
+      </nav>
+
+      <p
+        class="mt-5 text-sm text-slate-600"
+        id="service-count"
+        aria-live="polite"
+      >
+        {services.length} services shown
+      </p>
+      <div
+        class="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+        id="service-list"
+      >
+        {services.map((service) => (
+          <ServiceCard service={service} />
+        ))}
+      </div>
+      <p
+        class="hidden py-12 text-center text-slate-600"
+        id="no-services"
+        role="status"
+      >
+        No services match those filters. Try another search.
+      </p>
+      <button
+        class="hidden min-h-10 rounded-lg border border-slate-300 px-4 text-sm font-semibold text-brand-800 hover:border-brand-700"
+        id="clear-service-filters"
+        type="button"
+      >
+        Clear search and filters
+      </button>
+    </section>
+  </main>
+</BaseLayout>
+
+<script>
+  const search = document.querySelector<HTMLInputElement>("#service-search");
+  const category =
+    document.querySelector<HTMLSelectElement>("#category-filter");
+  const categoryFromUrl = new URLSearchParams(window.location.search).get(
+    "category",
+  );
+  const cards = Array.from(
+    document.querySelectorAll<HTMLElement>(".service-card"),
+  );
+  const count = document.querySelector<HTMLElement>("#service-count");
+  const emptyState = document.querySelector<HTMLElement>("#no-services");
+  const clearButton = document.querySelector<HTMLButtonElement>(
+    "#clear-service-filters",
+  );
+
+  function filterServices() {
+    const query = search?.value.trim().toLocaleLowerCase() ?? "";
+    const selectedCategory = category?.value ?? "";
+    let visible = 0;
+
+    for (const card of cards) {
+      const matchesText =
+        card.dataset.search?.toLocaleLowerCase().includes(query) ?? false;
+      const matchesCategory =
+        !selectedCategory || card.dataset.category === selectedCategory;
+      const shouldShow = matchesText && matchesCategory;
+      card.hidden = !shouldShow;
+      if (shouldShow) visible += 1;
+    }
+
+    if (count)
+      count.textContent = `${visible} ${visible === 1 ? "service" : "services"} shown`;
+    emptyState?.classList.toggle("hidden", visible !== 0);
+    clearButton?.classList.toggle("hidden", !query && !selectedCategory);
+  }
+
+  search?.addEventListener("input", filterServices);
+  category?.addEventListener("change", filterServices);
+  if (category && categoryFromUrl) {
+    category.value = categoryFromUrl;
+    if (category.value) filterServices();
+  }
+  clearButton?.addEventListener("click", () => {
+    if (search) search.value = "";
+    if (category) category.value = "";
+    filterServices();
+  });
+</script>

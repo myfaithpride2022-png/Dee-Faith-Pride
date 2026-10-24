@@ -1,0 +1,27 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import PageIntro from "@/components/ui/PageIntro.astro";
+---
+
+<BaseLayout
+  title="Announcements | Dee-Faith Pride Multi-Biz"
+  description="Important service announcements from Dee-Faith Pride Multi-Biz."
+>
+  <main id="main-content">
+    <PageIntro
+      eyebrow="Updates"
+      title="Announcements"
+      description="Important service notices and deadlines will be published here once provided and approved."
+    />
+    <section class="mx-auto max-w-7xl px-5 py-12 sm:px-8">
+      <div class="rounded-2xl border border-slate-200 bg-white p-7 sm:p-10">
+        <h2 class="text-lg font-semibold text-slate-900">
+          No announcements yet
+        </h2>
+        <p class="mt-2 text-sm leading-6 text-slate-600">
+          No current notices have been supplied for publication.
+        </p>
+      </div>
+    </section>
+  </main>
+</BaseLayout>
