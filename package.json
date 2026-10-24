@@ -16,7 +16,7 @@
     "format:check": "prettier --check ."
   },
   "dependencies": {
-    "@astrojs/node": "^11.1.9",
+    "@astrojs/vercel": "^11.0.16",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.118.0",
     "astro": "^7.4.2",

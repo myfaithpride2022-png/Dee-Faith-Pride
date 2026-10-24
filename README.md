@@ -8,7 +8,7 @@ The public storefront includes the cybercafé services specified by the owner, m
 
 ## Technology
 
-- Astro with server output and the standalone Node adapter
+- Astro with server output and the Vercel adapter
 - TypeScript with Astro's strict configuration
 - Tailwind CSS v4 through its Vite plugin
 - Prettier with Astro file support
@@ -50,6 +50,23 @@ The following configuration is required for the Supabase-backed pages and admin 
 - `PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY` (server-only)
 
+## Deploy to Vercel
+
+The project is configured for Astro server-side rendering on Vercel.
+
+1. Sign in to [Vercel](https://vercel.com/) and choose **Add New → Project**.
+2. Import `myfaithpride2022-png/Dee-Faith-Pride` from GitHub. Keep the root directory as `.` and let Vercel detect Astro. The build command is `pnpm build`.
+3. Add these environment variables in Vercel project settings for Production and Preview. Set them in the Vercel dashboard only; never add secret values to Git or paste them into chat.
+   - `PUBLIC_SITE_URL` — the deployed site origin, for example `https://your-project.vercel.app`; update it if you connect a custom domain.
+   - `PUBLIC_SUPABASE_URL` — the Supabase project URL.
+   - `PUBLIC_SUPABASE_ANON_KEY` — the Supabase publishable/anon key.
+   - `SUPABASE_SERVICE_ROLE_KEY` — the Supabase service-role secret; server-side only.
+4. Deploy the project. Vercel will create Production deployments from `main` and Preview deployments from other branches.
+5. In Supabase **Authentication → URL Configuration**, set the site URL to the production URL and add the production and preview Vercel URLs to the redirect allow list. Keep local development URLs if needed.
+6. After deployment, verify `/`, `/services`, and `/admin/login`. Apply the pending manual-operations migration in Supabase before using payment reports or admin order review.
+
+The admin and customer order APIs require server-side Supabase configuration. WhatsApp enquiries and the public catalogue do not rely on payment gateways. Do not publish payment instructions until verified by the business owner.
+
 ## Checks and production build
 
 ```sh
@@ -64,7 +81,7 @@ To format supported project files:
 corepack pnpm format
 ```
 
-The Node adapter produces a standalone server build. A deployment host, domain, and production environment variables have not yet been selected or configured.
+The Vercel adapter builds the server-rendered app for Vercel Functions. A Vercel project, domain, and production environment variables must be configured in Vercel before the website is live.
 
 ## Public pages currently implemented
 

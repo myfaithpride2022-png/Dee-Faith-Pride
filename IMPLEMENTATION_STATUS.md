@@ -24,6 +24,7 @@ Manual order operations and public service experience
 - Added a customer order form that is shown only for an active service with valid form configuration and a confirmed fixed price.
 - The order form submits to the existing server endpoint, which calculates the amount server-side, saves the order, and returns a reference and private tracking token. Payment collection and payment confirmation are not part of this flow.
 - Added Supabase SSR server clients with HTTP-only, same-site cookies and active-profile checks.
+- Configured the official Astro Vercel adapter for server-rendered deployment; deployment still requires importing the GitHub repository and setting private environment variables in Vercel.
 - Added same-origin admin sign-in/sign-out endpoints with generic authentication errors and no public role assignment.
 - Added protected `/admin` and `/admin/services` pages plus server-side service create/edit operations guarded by staff authentication and database RLS.
 - Service form fields are validated server-side, and naira amounts are converted to integer minor units without floating-point math.
@@ -37,7 +38,7 @@ Manual order operations and public service experience
 - `corepack pnpm install --reporter append-only` — passed; dependencies installed using pnpm 12.15.0.
 - `corepack pnpm check` — passed; 0 errors, 0 warnings, 0 hints across 43 files.
 - `corepack pnpm format:check` — passed; all matched files use Prettier style.
-- `corepack pnpm build` — passed after the manual payment and admin-operations changes; Astro server output built with the standalone Node adapter.
+- `corepack pnpm build` — passed after the manual payment and admin-operations changes; Vercel-specific deployment build still requires verification.
 - `corepack pnpm test` — passed; all 7 order validation tests pass.
 - Production preview smoke tests — login page returned 200; unauthenticated `/admin` redirected to login; same-origin service mutation returned 401 without staff session; foreign-origin mutation returned 403; public catalogue and service detail returned 200.
 - Public catalogue smoke test — 19 service cards rendered; requested service/provider names were present; every sampled booking link generated a prefilled WhatsApp URL using the owner-supplied number; document printing detail and WhatsApp CTA returned HTTP 200.
@@ -51,7 +52,7 @@ Manual order operations and public service experience
 - Provider marks are used for identification and do not imply affiliation. Confirm permissions and usage requirements with the respective brand owners before production.
 - Customer order-status lookup is not implemented. The private token currently authorizes payment reporting only.
 - Owner must provide approved payment instructions, business policies, and any production branding assets.
-- A deployment host and domain have not been selected.
+- Vercel deployment is not live yet. Import the GitHub repository, configure the four environment variables in Vercel, deploy, and update Supabase Auth URL settings for the deployed host.
 
 ## Completed milestones
 
