@@ -82,6 +82,17 @@ corepack pnpm format
 
 The Vercel adapter builds the server-rendered app for Vercel Functions. A production deployment is live on the Vercel-provided domain; Supabase environment variables and authentication URL configuration still need to be verified.
 
+## Google Search Console
+
+The project is prepared for Google ownership verification and sitemap submission. Redeploy first so the verification file, robots file, and updated sitemap are live.
+
+1. Open [Google Search Console](https://search.google.com/search-console/) and add the URL-prefix property `https://dee-faith-pride.vercel.app/`.
+2. Verify ownership using either the HTML file (`/google1b5cebb97ee1e7f5.html`) or the Google verification meta tag already included in the site layout.
+3. In the property, open **Sitemaps** and submit `https://dee-faith-pride.vercel.app/sitemap.xml`.
+4. Use **URL inspection** for the homepage and request indexing if desired. Google decides when and whether pages appear in results; submission does not guarantee immediate indexing.
+
+If the production domain changes, update the Astro `site` value, `public/robots.txt`, and `public/sitemap.xml`, then redeploy and add/verify the new property.
+
 ## Public pages currently implemented
 
 - `/` — introduction, original digital-life illustration, and provider highlights

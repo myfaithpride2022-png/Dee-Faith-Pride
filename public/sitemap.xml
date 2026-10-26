@@ -1,4 +1,3 @@
-
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
@@ -16,5 +15,13 @@
   <url>
     <loc>https://dee-faith-pride.vercel.app/contact</loc>
   </url>
+  <url>
+    <loc>https://dee-faith-pride.vercel.app/announcements</loc>
+  </url>
+  <url>
+    <loc>https://dee-faith-pride.vercel.app/book-appointment</loc>
+  </url>
+  <url>
+    <loc>https://dee-faith-pride.vercel.app/faq</loc>
+  </url>
 </urlset>
-
