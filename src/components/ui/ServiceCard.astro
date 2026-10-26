@@ -22,7 +22,11 @@ const enquiryMessage = [
   "",
   "Please confirm availability, requirements, and the current price.",
   ...(prompts.length > 0
-    ? ["", "I can provide:", ...prompts.map((prompt) => `- ${prompt}`)]
+    ? [
+        "",
+        "Service-specific details to discuss:",
+        ...prompts.map((prompt) => `- ${prompt}`),
+      ]
     : []),
 ].join("\n");
 ---

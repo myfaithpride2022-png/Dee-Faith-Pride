@@ -54,6 +54,9 @@ const nextSteps = serviceDetails.slice(0, 4);
       data-service-name={serviceName}
       data-whatsapp-number={whatsappNumber}
     >
+      {serviceDetails.map((detail) => (
+        <input type="hidden" name="serviceDetail" value={detail} />
+      ))}
       <div>
         <label
           class="mb-1.5 block text-sm font-medium text-slate-800"
@@ -130,6 +133,10 @@ const nextSteps = serviceDetails.slice(0, 4);
         const requestDetails = String(
           formData.get("requestDetails") ?? "",
         ).trim();
+        const serviceDetails = formData
+          .getAll("serviceDetail")
+          .map((detail) => String(detail).trim())
+          .filter(Boolean);
         const lines = [
           "Hello Dee-Faith Pride Multi-Biz,",
           "",
@@ -138,8 +145,16 @@ const nextSteps = serviceDetails.slice(0, 4);
           "",
           "Request details:",
           requestDetails,
+          ...(serviceDetails.length > 0
+            ? [
+                "",
+                "Service-specific details to discuss:",
+                ...serviceDetails.map((detail) => `- ${detail}`),
+              ]
+            : []),
           "",
           "Please confirm availability, requirements, and the current price before I proceed.",
+          "I will not send passwords, PINs, or one-time codes.",
         ].filter((line) => line !== undefined);
         const link = `https://wa.me/${phone}?text=${encodeURIComponent(lines.join("\n"))}`;
         const whatsappWindow = window.open(link, "_blank");
